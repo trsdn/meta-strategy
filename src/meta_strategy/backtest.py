@@ -173,18 +173,10 @@ def supertrend_direction(
     return pd.Series(direction, index=close.index)
 
 
-def weekly_sma(close: pd.Series, length: int = 20) -> pd.Series:
-    """Simulate weekly SMA on daily data (5 trading days per week)."""
+def ema(close: pd.Series, length: int = 21) -> pd.Series:
+    """Exponential Moving Average."""
     close = pd.Series(close)
-    weekly_length = length * 5
-    return close.rolling(weekly_length).mean()
-
-
-def weekly_ema(close: pd.Series, length: int = 21) -> pd.Series:
-    """Simulate weekly EMA on daily data."""
-    close = pd.Series(close)
-    weekly_length = length * 5
-    return close.ewm(span=weekly_length, adjust=False).mean()
+    return close.ewm(span=length, adjust=False).mean()
 
 
 def rsi(close: pd.Series, length: int = 14) -> pd.Series:
@@ -277,19 +269,20 @@ class SuperTrendStrategy(Strategy):
 
 
 class BullMarketSupportBandStrategy(Strategy):
-    """Bull Market Support Band (20w SMA + 21w EMA crossover).
+    """Bull Market Support Band (20-week SMA + 21-week EMA crossover).
 
+    Designed for weekly timeframe. Uses plain SMA/EMA — run with --interval 1wk.
     Entry: EMA crosses above SMA (bullish crossover)
     Exit: EMA crosses below SMA (bearish crossunder)
-    Expected: ~736% Net Profit (from input.md)
+    Expected: ~736% Net Profit (from input.md, weekly BTC-USD)
     """
 
     sma_length = 20
     ema_length = 21
 
     def init(self) -> None:
-        self.sma = self.I(weekly_sma, self.data.Close, self.sma_length)
-        self.ema = self.I(weekly_ema, self.data.Close, self.ema_length)
+        self.sma = self.I(sma, self.data.Close, self.sma_length)
+        self.ema = self.I(ema, self.data.Close, self.ema_length)
 
     def next(self) -> None:
         if not self.position:
@@ -301,7 +294,7 @@ class BullMarketSupportBandStrategy(Strategy):
     @classmethod
     def warmup_indicators(cls, data: pd.DataFrame) -> list[pd.Series]:
         close = data["Close"]
-        return [weekly_sma(close, cls.sma_length), weekly_ema(close, cls.ema_length)]
+        return [sma(close, cls.sma_length), ema(close, cls.ema_length)]
 
 
 class RSIStrategy(Strategy):

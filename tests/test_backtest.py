@@ -18,12 +18,12 @@ from meta_strategy.backtest import (
     SuperTrendStrategy,
     bollinger_lower,
     bollinger_upper,
+    ema,
     macd_line,
     macd_signal,
     rsi,
+    sma,
     supertrend_direction,
-    weekly_ema,
-    weekly_sma,
 )
 
 
@@ -151,16 +151,16 @@ def test_bollinger_indicators():
     assert abs(lower.iloc[-1] - 100.0) < 0.01
 
 
-def test_weekly_sma_ema_lengths():
-    """Weekly SMA/EMA compute on correct window sizes."""
+def test_sma_ema_lengths():
+    """SMA/EMA compute on correct window sizes."""
     close = pd.Series(range(200), dtype=float)
-    sma = weekly_sma(close, length=20)
-    ema = weekly_ema(close, length=21)
-    # SMA should have NaN for first (20*5 - 1) values
-    assert pd.isna(sma.iloc[98])
-    assert not pd.isna(sma.iloc[99])
+    s = sma(close, length=20)
+    e = ema(close, length=21)
+    # SMA should have NaN for first 19 values
+    assert pd.isna(s.iloc[18])
+    assert not pd.isna(s.iloc[19])
     # EMA should have values everywhere (ewm doesn't produce NaN)
-    assert not pd.isna(ema.iloc[-1])
+    assert not pd.isna(e.iloc[-1])
 
 
 # === Sprint 6 tests ===
