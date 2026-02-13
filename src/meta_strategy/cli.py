@@ -123,12 +123,15 @@ def backtest(
     interval: str = typer.Option("1d", help="Candle interval (1h, 4h, 1d, etc.)"),
 ) -> None:
     """Run a backtest for a single strategy."""
-    from .backtest import STRATEGIES, run_backtest
+    from .backtest import STRATEGIES, SUB_DAILY_INTERVALS, run_backtest
 
     if strategy_name not in STRATEGIES:
         typer.echo(f"❌ Unknown strategy: {strategy_name}", err=True)
         typer.echo(f"   Available: {', '.join(STRATEGIES.keys())}", err=True)
         raise typer.Exit(1)
+
+    if strategy_name == "bull-market-support-band" and interval in SUB_DAILY_INTERVALS:
+        typer.echo(f"⚠️  BMSB uses weekly moving averages — results on {interval} may not be meaningful")
 
     typer.echo(f"📊 Running {strategy_name} on {symbol} ({start} → {end or 'today'}, {interval})...")
     result = run_backtest(
@@ -170,11 +173,24 @@ def backtest_all(
     )
 
     if results:
-        r0 = results[0]
-        typer.echo(
-            f"📐 B&H normalized: {r0['warmup_bars_trimmed']} warmup bars trimmed, "
-            f"effective start: {r0['effective_start']}\n"
-        )
+        r0 = next((r for r in results if not r.get("skipped")), None)
+        if r0:
+            typer.echo(
+                f"📐 B&H normalized: {r0['warmup_bars_trimmed']} warmup bars trimmed, "
+                f"effective start: {r0['effective_start']}\n"
+            )
+
+    # Show skipped strategies
+    active_results = []
+    for r in results:
+        if r.get("skipped"):
+            typer.echo(f"⏭️  {r['strategy']}: skipped ({r['reason']})")
+        else:
+            active_results.append(r)
+
+    if not active_results:
+        typer.echo("\n❌ No strategies could run with the given parameters.")
+        return
 
     # Print comparison table
     header = (
@@ -184,7 +200,7 @@ def backtest_all(
     sep = "-" * len(header)
     typer.echo(header)
     typer.echo(sep)
-    for r in results:
+    for r in active_results:
         line = (
             f"{r['strategy']:<28} {r['return_pct']:>10.2f} {r['buy_hold_return_pct']:>10.2f} "
             f"{r['win_rate_pct']:>10.2f} {r['num_trades']:>8d} {r['max_drawdown_pct']:>10.2f} "
@@ -194,7 +210,7 @@ def backtest_all(
     typer.echo(sep)
 
     # Best performer
-    best = max(results, key=lambda r: r["return_pct"])
+    best = max(active_results, key=lambda r: r["return_pct"])
     typer.echo(f"\n🏆 Best performer: {best['strategy']} ({best['return_pct']:.2f}%)")
 
     if save:

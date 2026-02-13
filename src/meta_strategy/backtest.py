@@ -519,11 +519,19 @@ def run_all_backtests(symbol: str = "BTC-USD", start: str = "2018-01-01", **kwar
     but B&H is recalculated from the max warmup bar across all strategies
     so every strategy shows the same B&H for fair comparison.
     """
-    data = fetch_data(symbol, start, kwargs.get("end"), interval=kwargs.get("interval", "1d"))
+    interval = kwargs.get("interval", "1d")
+    data = fetch_data(symbol, start, kwargs.get("end"), interval=interval)
 
-    # Detect max warmup across all strategies
+    # Determine which strategies to run (skip BMSB on sub-daily)
+    strategies_to_run = dict(STRATEGIES)
+    skipped: list[str] = []
+    if interval in SUB_DAILY_INTERVALS and "bull-market-support-band" in strategies_to_run:
+        del strategies_to_run["bull-market-support-band"]
+        skipped.append("bull-market-support-band")
+
+    # Detect max warmup across strategies being run
     max_warmup = 0
-    for strategy_cls in STRATEGIES.values():
+    for strategy_cls in strategies_to_run.values():
         warmup = detect_warmup(strategy_cls, data)
         max_warmup = max(max_warmup, warmup)
 
@@ -534,12 +542,17 @@ def run_all_backtests(symbol: str = "BTC-USD", start: str = "2018-01-01", **kwar
     effective_start = data.index[max_warmup].strftime("%Y-%m-%d")
 
     results = []
-    for name in STRATEGIES:
+    for name in strategies_to_run:
         result = run_backtest(name, symbol=symbol, start=start, **kwargs)
         result["buy_hold_return_pct"] = normalized_bh
         result["effective_start"] = effective_start
         result["warmup_bars_trimmed"] = max_warmup
         results.append(result)
+
+    # Add skipped entries so callers know what was excluded
+    for name in skipped:
+        results.append({"strategy": name, "skipped": True, "reason": f"Not supported on {interval} interval"})
+
     return results
 
 
