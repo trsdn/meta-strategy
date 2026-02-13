@@ -72,6 +72,10 @@ See `docs/architecture/ADR.md` for all architectural decisions. **Do NOT modify 
 
 Never silently abandon an in-progress issue to chase a new idea.
 
+### Drift Control
+
+Sprint scope is locked once planning completes. Discovered work goes to backlog — never into the current sprint. Every huddle includes a drift check. If >2 unplanned issues are created in a sprint, escalate immediately.
+
 ---
 
 ## Workflow Gates

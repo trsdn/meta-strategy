@@ -92,6 +92,7 @@ The agent operates autonomously through full sprint cycles (plan → execute →
 | **Production deployment** | Real-world implications | "Ready to deploy to production?" |
 | **Data source change** | Affects all downstream consumers | Switching a primary data provider |
 | **Spending/resource decisions** | Cost implications | Upgrading CI runner, adding paid API |
+| **Sprint scope drift** | Unplanned work signals misalignment | ">2 unplanned issues created this sprint" |
 
 ### ⚠️ SHOULD Escalate (notify, continue if no response within sprint)
 
@@ -142,6 +143,41 @@ The stakeholder can:
 - **Reply with direction** → agent adjusts priorities accordingly
 - **Veto** → agent stops and waits for guidance
 
+## Drift Control
+
+Autonomous execution requires guardrails against silent drift — where individually valid commits collectively move the project in an unintended direction.
+
+### Sprint Scope Lock
+
+- The AI may ONLY execute issues assigned to the current sprint milestone
+- Discovered work during execution → create a new issue in **backlog** (no status label), NOT in the current sprint
+- Self-created issues during a sprint NEVER get `status:planned` — they go to backlog for the next planning cycle
+- If >2 unplanned issues are created in a single sprint → **MUST escalate** to stakeholder
+
+### Drift Check (at every huddle)
+
+After each issue completes, the huddle MUST include this checklist:
+
+- [ ] Current issue was in the sprint plan
+- [ ] No unplanned scope was added without escalation
+- [ ] Files changed relate to sprint issues only
+- [ ] Sprint goal is still achievable with remaining issues
+
+**⚠️ If any item is unchecked → STOP and escalate to stakeholder before continuing.**
+
+### Sprint Boundary Review
+
+At sprint review, produce a holistic change summary:
+
+```bash
+git diff --stat <sprint-start-sha>..HEAD
+```
+
+Report:
+- Total files changed across all sprint issues
+- Files changed that don't relate to any sprint issue (flag these)
+- New issues created during the sprint (planned vs unplanned)
+
 ---
 
 ## Sprint Ceremonies
@@ -149,7 +185,7 @@ The stakeholder can:
 ### Cycle
 
 ```
-Planning → Start → [Execute with Huddles] → Review → Retro → Planning
+Refine → Planning → Start → [Execute with Huddles] → Review → Retro → Refine
 ```
 
 ### Ceremony Rules
@@ -162,6 +198,7 @@ Planning → Start → [Execute with Huddles] → Review → Retro → Planning
 | **Execute** | Tests | Every feature PR MUST include unit tests (min 3, behavior-verifying) |
 | **Execute** | CI | Wait for CI green before merging. Never merge on red |
 | **Review** | Summary | Send sprint summary notification; stakeholder reviews async |
+| **Refinement** | `/refine` | Before sprint planning | Process `type:idea` issues into concrete backlog items | No code changes, only issues |
 | **Retro** | Improve | MUST evaluate process/tooling improvements (Step 8) |
 
 ---
@@ -214,6 +251,14 @@ Bad: "Improve the scoring system"
 Good: "Add weighted decay to score_candidates(). Input: list[Candidate], decay_factor: float. Output: sorted list. Acceptance: scores decrease by decay_factor per period. Tests: 3 cases (no decay, 50% decay, full decay)."
 
 The agent MUST NOT start implementing an issue that lacks acceptance criteria. Instead: write the criteria first, add them to the issue, then implement.
+
+### Idea Labels
+
+| Label | Meaning |
+|-------|---------|
+| `type:idea` | Lightweight idea from stakeholder — needs refinement before sprint planning |
+
+**Idea lifecycle**: Stakeholder creates `type:idea` issue (1-2 sentences) → `/refine` decomposes it → concrete issues created in backlog → idea closed as refined
 
 ### Label Flow
 

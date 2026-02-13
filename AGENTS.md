@@ -102,6 +102,7 @@ See `docs/architecture/ADR.md` for immutable architectural decisions.
 | `sprint-start` | Begin sprint execution with quality gates |
 | `sprint-review` | Demo deliverables, metrics, acceptance |
 | `sprint-retro` | Process improvements, velocity tracking |
+| `refine` | Turn `type:idea` issues into concrete backlog items with acceptance criteria |
 | `orchestrate-feature` | Full feature pipeline |
 | `orchestrate-bugfix` | Full bugfix pipeline |
 | `code-review` | Structured code review |

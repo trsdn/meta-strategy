@@ -70,17 +70,14 @@ Below this manifesto, add your project-specific philosophy:
 
 ### Core Mission
 
-<!-- What is your project fundamentally trying to achieve? -->
-{{PROJECT_DESCRIPTION}}
+Convert TradingView indicators into backtestable strategies and validate them locally with real market data.
 
 ### Project Principles (In Priority Order)
 
-<!-- Customize these for your domain -->
-
-1. **Stability First** — What must never break?
-2. **Quality** — What does "correct" mean?
-3. **Velocity** — How do you balance speed with quality?
-4. **Optimization** — What are nice-to-haves vs must-haves?
+1. **Strategy Accuracy** — Backtest results must reflect real market behavior. No repainting, no lookahead bias, no inverted entry/exit logic.
+2. **Quality** — 58 tests, CI pipeline, lint + type checks. Every strategy change is verified before merge.
+3. **Velocity** — Autonomous sprint execution. The agent runs full sprint cycles; the stakeholder steers direction.
+4. **Simplicity** — YAML-driven strategy definitions, config over code. The best strategy is the one that doesn't need custom code.
 
 ### Decision Framework
 
@@ -92,10 +89,9 @@ When evaluating any change, ask:
 
 ### What We DON'T Optimize
 
-<!-- Be explicit about anti-goals for your project -->
-- Not pursuing 100% test coverage (diminishing returns beyond ~80%)
-- Not optimizing for maximum feature velocity (quality over speed)
-- Not chasing every new technology (stability over novelty)
+- Not pursuing live trading — we generate and validate strategies, not execute them
+- Not optimizing for maximum strategy count — quality over quantity
+- Not chasing real-time data feeds — local CSV backtesting is sufficient
 
 ---
 
