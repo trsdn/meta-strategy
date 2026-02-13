@@ -2,9 +2,8 @@
 
 import numpy as np
 import pandas as pd
-import pytest
 
-from meta_strategy.risk import compute_risk_metrics, _max_consecutive
+from meta_strategy.risk import _max_consecutive, compute_risk_metrics
 
 
 def test_compute_risk_metrics_uptrend():

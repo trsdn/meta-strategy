@@ -6,26 +6,25 @@ Uses synthetic data to verify strategy signal logic without network calls.
 import numpy as np
 import pandas as pd
 import pytest
+from backtesting import Backtest
 
 from meta_strategy.backtest import (
+    STRATEGIES,
     BollingerBandsStrategy,
-    SuperTrendStrategy,
     BullMarketSupportBandStrategy,
-    RSIStrategy,
-    MACDStrategy,
     ConfluenceStrategy,
-    bollinger_upper,
+    MACDStrategy,
+    RSIStrategy,
+    SuperTrendStrategy,
     bollinger_lower,
-    supertrend_direction,
-    weekly_sma,
-    weekly_ema,
-    rsi,
+    bollinger_upper,
     macd_line,
     macd_signal,
-    sma,
-    STRATEGIES,
+    rsi,
+    supertrend_direction,
+    weekly_ema,
+    weekly_sma,
 )
-from backtesting import Backtest
 
 
 def _make_ohlcv(close_prices: list[float], spread: float = 2.0) -> pd.DataFrame:
@@ -236,7 +235,7 @@ def test_confluence_strategy_runs():
 
 def test_multi_asset_returns_results_per_symbol():
     """run_multi_asset returns one result per symbol."""
-    from meta_strategy.backtest import run_multi_asset, DEFAULT_ASSETS
+    from meta_strategy.backtest import run_multi_asset
     # Just test the function signature / error handling with a bad symbol
     results = run_multi_asset("bollinger-bands", symbols=["INVALID_SYMBOL_XYZ"])
     assert len(results) == 1
@@ -261,7 +260,7 @@ def test_param_grids_defined():
 
 def test_optimize_with_synthetic_data():
     """optimize_strategy returns sorted results."""
-    from meta_strategy.backtest import optimize_strategy, STRATEGIES, Backtest
+    from meta_strategy.backtest import optimize_strategy
     # Patch fetch_data to avoid network calls
     data = _make_ohlcv([100 + i * 0.5 for i in range(200)])
     import meta_strategy.backtest as bt_mod

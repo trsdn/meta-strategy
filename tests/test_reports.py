@@ -5,12 +5,11 @@ import os
 import tempfile
 
 import pandas as pd
-import pytest
 
 from meta_strategy.reports import (
+    _svg_equity_chart,
     export_results_csv,
     export_results_json,
-    _svg_equity_chart,
 )
 
 
@@ -48,7 +47,8 @@ def test_export_json():
         path = f.name
     try:
         export_results_json(results, path)
-        loaded = json.loads(open(path).read())
+        with open(path) as f:
+            loaded = json.loads(f.read())
         assert len(loaded) == 1
         assert loaded[0]["strategy"] == "test"
         assert loaded[0]["return_pct"] == 50.0

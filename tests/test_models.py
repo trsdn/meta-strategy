@@ -1,6 +1,5 @@
 """Tests for StrategyDefinition model."""
 
-from pathlib import Path
 
 import pytest
 import yaml

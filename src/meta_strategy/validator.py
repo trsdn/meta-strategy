@@ -91,17 +91,16 @@ def _check_invalid_variables(line_num: int, line: str) -> list[ValidationWarning
             message="strategy.commission.percent used as variable — does not exist in Pine Script",
             suggestion="Set commission in the strategy() function: commission_type=strategy.commission.percent",
         ))
-    if "strategy.slippage" in line and "slippage" not in line.split("strategy.slippage")[0]:
-        # Check if it's used standalone, not as strategy() param
-        if not re.search(r'strategy\s*\(.*strategy\.slippage', line):
-            if stripped.startswith("strategy.slippage") or "= strategy.slippage" in line:
-                warnings.append(ValidationWarning(
-                    line_number=line_num,
-                    severity=Severity.CRITICAL,
-                    rule="invalid-variable",
-                    message="strategy.slippage used as variable — does not exist in Pine Script",
-                    suggestion="Set slippage in the strategy() function: slippage=N",
-                ))
+    if ("strategy.slippage" in line and "slippage" not in line.split("strategy.slippage")[0]
+            and not re.search(r'strategy\s*\(.*strategy\.slippage', line)
+            and (stripped.startswith("strategy.slippage") or "= strategy.slippage" in line)):
+        warnings.append(ValidationWarning(
+            line_number=line_num,
+            severity=Severity.CRITICAL,
+            rule="invalid-variable",
+            message="strategy.slippage used as variable — does not exist in Pine Script",
+            suggestion="Set slippage in the strategy() function: slippage=N",
+        ))
     return warnings
 
 
