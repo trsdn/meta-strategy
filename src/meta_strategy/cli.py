@@ -350,6 +350,62 @@ def export(
     typer.echo(f"✅ Results exported to {path}")
 
 
+@app.command(name="monte-carlo")
+def monte_carlo_cmd(
+    strategy_name: str = typer.Argument(..., help="Strategy name"),
+    symbol: str = typer.Option("BTC-USD", help="Asset symbol"),
+    start: str = typer.Option("2018-01-01", help="Start date"),
+    simulations: int = typer.Option(1000, help="Number of Monte Carlo simulations"),
+    cash: float = typer.Option(100_000.0, help="Initial capital"),
+) -> None:
+    """Monte Carlo simulation for strategy robustness."""
+    from .risk import monte_carlo
+
+    typer.echo(f"🎲 Running {simulations} Monte Carlo simulations for {strategy_name} on {symbol}...\n")
+    result = monte_carlo(strategy_name, symbol=symbol, start=start, cash=cash, n_simulations=simulations)
+
+    if result["n_trades"] == 0:
+        typer.echo("⚠️  No trades were generated — cannot run simulation.")
+        return
+
+    typer.echo(f"  Original Return:    {result['original_return_pct']:>10.2f}%")
+    typer.echo(f"  Simulations:        {result['n_simulations']:>10d}")
+    typer.echo(f"  Trades resampled:   {result['n_trades']:>10d}")
+    typer.echo("")
+    typer.echo(f"  5th percentile:     {result['p5_return_pct']:>10.2f}%  (worst case)")
+    typer.echo(f"  Median:             {result['median_return_pct']:>10.2f}%")
+    typer.echo(f"  95th percentile:    {result['p95_return_pct']:>10.2f}%  (best case)")
+    typer.echo(f"  Mean:               {result['mean_return_pct']:>10.2f}%")
+    typer.echo(f"  Std Dev:            {result['std_return_pct']:>10.2f}%")
+    typer.echo(f"  P(Profit):          {result['prob_profit_pct']:>10.1f}%")
+
+
+@app.command(name="risk-metrics")
+def risk_metrics_cmd(
+    strategy_name: str = typer.Argument(..., help="Strategy name"),
+    symbol: str = typer.Option("BTC-USD", help="Asset symbol"),
+    start: str = typer.Option("2018-01-01", help="Start date"),
+    cash: float = typer.Option(100_000.0, help="Initial capital"),
+) -> None:
+    """Extended risk metrics (Sortino, Calmar, profit factor, etc.)."""
+    from .risk import run_risk_analysis
+
+    typer.echo(f"📊 Computing risk metrics for {strategy_name} on {symbol}...\n")
+    m = run_risk_analysis(strategy_name, symbol=symbol, start=start, cash=cash)
+
+    typer.echo(f"  Sharpe Ratio:           {m['sharpe_ratio']:>10.3f}")
+    typer.echo(f"  Sortino Ratio:          {m['sortino_ratio']:>10.3f}")
+    typer.echo(f"  Calmar Ratio:           {m['calmar_ratio']:>10.3f}")
+    typer.echo(f"  Profit Factor:          {m['profit_factor']:>10.3f}")
+    typer.echo(f"  Recovery Factor:        {m['recovery_factor']:>10.3f}")
+    typer.echo(f"  Annual Return:          {m['annual_return_pct']:>10.2f}%")
+    typer.echo(f"  Max Drawdown:           {m['max_drawdown_pct']:>10.2f}%")
+    typer.echo(f"  Downside Deviation:     {m['downside_deviation']:>10.4f}")
+    typer.echo(f"  Max Consecutive Losses: {m['max_consecutive_losses']:>10d}")
+    typer.echo(f"  Max Consecutive Wins:   {m['max_consecutive_wins']:>10d}")
+    typer.echo(f"  # Trades:               {m['num_trades']:>10d}")
+
+
 def main() -> None:
     app()
 

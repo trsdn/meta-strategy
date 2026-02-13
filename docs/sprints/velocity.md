@@ -10,6 +10,7 @@ Track sprint-over-sprint performance to calibrate future sprint sizing.
 | 4 | 2026-02-13 | Multi-asset, optimization, walk-forward | 3 | 3 | 0 | ~0.3 | 10.0 | Grid search, walk-forward analysis |
 | 5 | 2026-02-13 | HTML reports, dashboard, CSV/JSON export | 3 | 3 | 0 | ~0.3 | 10.0 | SVG equity curves, dark theme |
 | 6 | 2026-02-13 | RSI, MACD, confluence strategies | 3 | 3 | 0 | ~0.3 | 10.0 | 6 total strategies now |
+| 7 | 2026-02-13 | CI, Monte Carlo, risk metrics, docs | 4 | 4 | 0 | ~0.3 | 13.3 | Full robustness suite |
 
 ## How to Read This
 

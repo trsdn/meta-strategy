@@ -1,24 +1,27 @@
 # Meta Strategy
 
-AI-powered TradingView indicator-to-strategy converter. Translates visual Pine Script indicators into backtestable strategy scripts using a structured prompt template workflow.
+AI-powered TradingView indicator-to-strategy converter with a full local backtesting engine. Translates Pine Script indicators into backtestable strategies, runs them locally on real market data, and provides optimization, risk analysis, and reporting tools.
 
 ## What This Does
 
-TradingView **indicators** show signals on a chart but can't be backtested. TradingView **strategies** can be backtested (Win Rate, Profit Factor, Drawdown). This tool automates the conversion:
+TradingView **indicators** show signals on a chart but can't be backtested. TradingView **strategies** can be backtested (Win Rate, Profit Factor, Drawdown). This tool:
 
-1. **Define** entry/exit rules in a YAML file
-2. **Generate** a filled AI prompt from the indicator source + rules
-3. **Validate** the generated Pine Script for common pitfalls
+1. **Converts** indicators → strategies via structured AI prompts
+2. **Backtests** strategies locally with real market data (no TradingView needed)
+3. **Optimizes** parameters via grid search and walk-forward analysis
+4. **Analyzes** risk with Monte Carlo simulation and extended metrics
+5. **Reports** results as HTML dashboards, CSV, or JSON
 
 ## Strategy Catalog
 
-| Strategy | Entry | Exit | Expected Result |
-|----------|-------|------|-----------------|
-| **Bollinger Bands** (Breakout) | Close > Upper Band | Close < Lower Band | ~1,187% Net Profit |
-| **SuperTrend** | Trend turns Green | Trend turns Red | — |
-| **Bull Market Support Band** | 20w SMA/EMA cross up | 20w SMA/EMA cross down | ~736% Net Profit |
-
-Pre-generated strategy files are in [`strategies/output/`](strategies/output/).
+| Strategy | Entry | Exit | BTC-USD Return | Sharpe |
+|----------|-------|------|---------------|--------|
+| **Bollinger Bands** | Close > Upper Band | Close < Lower Band | 1,804% | 0.67 |
+| **SuperTrend** | Direction flips to +1 | Direction flips to -1 | -64% | -0.39 |
+| **Bull Market Support Band** | EMA > SMA crossover | SMA > EMA crossunder | 211% | 0.28 |
+| **RSI** | RSI < 30 + above 200 SMA | RSI > 70 | — | — |
+| **MACD** | MACD crosses above signal | MACD crosses below signal | — | — |
+| **Confluence** | BB breakout + RSI ok + MACD up | BB lower or RSI > 80 | — | — |
 
 ## Quick Start
 
@@ -26,69 +29,58 @@ Pre-generated strategy files are in [`strategies/output/`](strategies/output/).
 # Install
 uv sync --dev
 
-# List available strategies
-uv run python -m meta_strategy.cli list
+# Run all backtests
+meta-strategy backtest-all
 
-# Validate a strategy definition
-uv run python -m meta_strategy.cli validate strategies/definitions/bollinger-bands.yml
+# Backtest a single strategy
+meta-strategy backtest bollinger-bands --symbol BTC-USD
 
-# Generate a filled prompt for AI conversion
-uv run python -m meta_strategy.cli generate strategies/definitions/bollinger-bands.yml
+# Optimize parameters
+meta-strategy optimize bollinger-bands --top 10
 
-# Validate a Pine Script file for pitfalls
-uv run python -m meta_strategy.cli validate-pine strategies/output/ai-bollinger-bands.pine
+# Walk-forward analysis
+meta-strategy walk-forward bollinger-bands --splits 5
+
+# Monte Carlo simulation
+meta-strategy monte-carlo bollinger-bands --simulations 1000
+
+# Extended risk metrics
+meta-strategy risk-metrics bollinger-bands
+
+# Multi-asset comparison
+meta-strategy multi-asset bollinger-bands --symbols BTC-USD,ETH-USD,SPY
+
+# Generate HTML dashboard
+meta-strategy dashboard --output dashboard.html
+
+# Export results
+meta-strategy export --fmt json
+meta-strategy export --fmt csv
 ```
 
-## How It Works
+## CLI Commands
 
-### The Meta-Strategy Workflow
-
-```
-Indicator Source Code + Entry/Exit Rules (YAML)
-        ↓
-  Prompt Template (prompt.md) filled by engine
-        ↓
-  AI produces Pine Script v6 strategy
-        ↓
-  Validator checks for common pitfalls
-        ↓
-  Ready-to-use .pine file for TradingView backtesting
-```
-
-### Adding a New Strategy
-
-1. Save the indicator source to `strategies/indicators/your-indicator.pine`
-2. Create a definition at `strategies/definitions/your-strategy.yml`:
-
-```yaml
-name: "Your Strategy"
-indicator_source: "strategies/indicators/your-indicator.pine"
-entry_condition: "describe when to go Long"
-exit_condition: "describe when to close Long"
-special_instructions:
-  - "Any AI correction notes"
-```
-
-3. Generate the prompt: `uv run python -m meta_strategy.cli generate strategies/definitions/your-strategy.yml`
-4. Use the prompt with an AI model to produce the strategy code
-5. Validate: `uv run python -m meta_strategy.cli validate-pine output.pine`
-
-## Common Pitfalls
-
-The validator detects these issues automatically:
-
-| Pitfall | Severity | Description |
-|---------|----------|-------------|
-| `lookahead_on` | 🔴 Critical | Produces false backtest results (future peeking) |
-| Missing gap fill | 🟡 Warning | `request.security()` without `gaps=` causes staircase lines |
-| Invalid variables | 🔴 Critical | `strategy.commission.percent` as variable doesn't exist |
-| Wrong name prefix | ℹ️ Info | Strategy names should start with "AI - " |
-| Line breaks in calls | 🟡 Warning | Pine Script doesn't support multi-line function calls |
+| Command | Description |
+|---------|-------------|
+| `backtest` | Run backtest for a single strategy |
+| `backtest-all` | Run all strategies, show comparison table |
+| `multi-asset` | Run a strategy across multiple assets |
+| `optimize` | Grid search parameter optimization |
+| `walk-forward` | Walk-forward out-of-sample validation |
+| `monte-carlo` | Monte Carlo trade resampling simulation |
+| `risk-metrics` | Extended risk metrics (Sortino, Calmar, etc.) |
+| `report` | Generate HTML report with equity curve |
+| `dashboard` | Generate comparison dashboard for all strategies |
+| `export` | Export results to CSV or JSON |
+| `generate` | Generate AI prompt from strategy definition |
+| `validate` | Validate a YAML strategy definition |
+| `validate-pine` | Validate Pine Script for common pitfalls |
+| `list` | List available strategy definitions |
 
 ## Development
 
 ```bash
-uv run python -m pytest tests/ -v        # Run tests (27 tests)
+uv run python -m pytest tests/ -v        # Run tests (58+ tests)
 uv run ruff check src/                    # Lint
 uv run ruff format src/                   # Format
 uv run mypy src/                          # Type check
@@ -97,27 +89,22 @@ uv run mypy src/                          # Type check
 ## Project Structure
 
 ```
-├── prompt.md                              # Pine Script conversion prompt template
-├── input.md                               # Strategy research / video content summary
-├── strategies/
-│   ├── definitions/                       # YAML strategy definitions
-│   │   ├── bollinger-bands.yml
-│   │   ├── supertrend.yml
-│   │   └── bull-market-support-band.yml
-│   ├── indicators/                        # Raw indicator source code
-│   │   ├── bollinger-bands.pine
-│   │   ├── supertrend.pine
-│   │   └── bull-market-support-band.pine
-│   └── output/                            # Generated strategy files
-│       ├── ai-bollinger-bands.pine
-│       ├── ai-supertrend.pine
-│       └── ai-bull-market-support-band.pine
 ├── src/meta_strategy/
-│   ├── models.py                          # StrategyDefinition Pydantic model
-│   ├── engine.py                          # Prompt template engine
-│   ├── validator.py                       # Pine Script pitfall validator
-│   └── cli.py                            # Typer CLI
-└── tests/                                 # 27 tests
+│   ├── backtest.py       # 6 strategy classes, indicators, optimization, walk-forward
+│   ├── reports.py        # HTML reports, SVG equity charts, CSV/JSON export
+│   ├── risk.py           # Monte Carlo simulation, extended risk metrics
+│   ├── models.py         # StrategyDefinition Pydantic model
+│   ├── engine.py         # Prompt template engine
+│   ├── validator.py      # Pine Script pitfall validator
+│   └── cli.py            # Typer CLI (14 commands)
+├── strategies/
+│   ├── definitions/      # YAML strategy definitions
+│   ├── indicators/       # Raw indicator Pine Script source
+│   └── output/           # Generated strategies + backtest results
+├── tests/                # 58+ tests
+└── docs/
+    ├── sprints/          # Sprint logs and velocity tracking
+    └── architecture/     # ADRs
 ```
 
 ## License

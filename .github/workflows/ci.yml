@@ -11,8 +11,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv pip install -e ".[dev]" --system
+
+      - name: Lint with ruff
+        run: uv run ruff check src/ tests/
+
+      - name: Type check with mypy
+        run: uv run mypy src/meta_strategy/ --ignore-missing-imports
+        continue-on-error: true
+
+      - name: Run tests
+        run: uv run python -m pytest tests/ -v --tb=short
+
+      - name: Security scan with bandit
+        run: uv run bandit -r src/ -q
+        continue-on-error: true
+
   validate:
-    name: Validate Template
+    name: Validate Structure
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +57,8 @@ jobs:
             "docs/constitution/PROCESS.md"
             "AGENTS.md"
             "README.md"
+            "pyproject.toml"
+            "src/meta_strategy/backtest.py"
           )
           for f in "${files[@]}"; do
             if [ ! -f "$f" ]; then
@@ -33,16 +68,19 @@ jobs:
             echo "✅ Found: $f"
           done
 
-      - name: Validate YAML files
+      - name: Validate YAML strategy definitions
         run: |
-          pip install yamllint --quiet
-          find . -name "*.yml" -o -name "*.yaml" | head -20 | while read f; do
-            yamllint -d "{extends: relaxed, rules: {line-length: disable}}" "$f" && echo "✅ $f" || echo "⚠️ $f has warnings"
-          done
-
-      - name: Check for unresolved placeholders
-        run: |
-          # Only warn — placeholders are expected in template repos
-          if grep -r "{{" --include="*.md" --include="*.yml" --include="*.yaml" . | grep -v ".git/" | grep -v "node_modules/"; then
-            echo "ℹ️ Placeholders found (expected for template repos)"
-          fi
+          pip install pyyaml --quiet
+          python -c "
+          import yaml, glob, sys
+          errors = 0
+          for f in glob.glob('strategies/definitions/*.yml'):
+              try:
+                  data = yaml.safe_load(open(f))
+                  assert 'name' in data and 'indicator_source' in data
+                  print(f'✅ {f}')
+              except Exception as e:
+                  print(f'❌ {f}: {e}')
+                  errors += 1
+          sys.exit(errors)
+          "
