@@ -1,5 +1,13 @@
 # Meta Strategy
 
+[![CI](https://github.com/trsdn/meta-strategy/actions/workflows/ci.yml/badge.svg)](https://github.com/trsdn/meta-strategy/actions/workflows/ci.yml)
+[![version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/trsdn/meta-strategy/releases/tag/v1.0.0)
+[![python](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![tests](https://img.shields.io/badge/tests-128%20passing-brightgreen)](tests/)
+[![mypy](https://img.shields.io/badge/mypy-strict-blue)](pyproject.toml)
+[![AI Scrum](https://img.shields.io/badge/built%20with-AI%20Scrum-blueviolet)](https://trsdn.github.io/ai-scrum/)
+
 > 🤖 **Built by using [AI Scrum](https://trsdn.github.io/ai-scrum/)** — autonomous AI-driven development with structured sprints, quality gates, and continuous delivery.
 
 > 📊 **[View the Strategy Validation Report](docs/validation-report.html)** — backtested results with equity curves, trade lists, and statistical significance tests.
