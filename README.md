@@ -2,6 +2,8 @@
 
 > 🤖 **Built by using [AI Scrum](https://trsdn.github.io/ai-scrum/)** — autonomous AI-driven development with structured sprints, quality gates, and continuous delivery.
 
+> 📊 **[View the Strategy Validation Report](docs/validation-report.html)** — backtested results with equity curves, trade lists, and statistical significance tests.
+
 AI-powered TradingView indicator-to-strategy converter with a full local backtesting engine. Translates Pine Script indicators into backtestable strategies, runs them locally on real market data, and provides optimization, risk analysis, and reporting tools.
 
 ## What This Does
