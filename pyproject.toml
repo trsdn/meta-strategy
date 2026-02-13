@@ -14,6 +14,7 @@ dependencies = [
     "pandas>=2.0",
     "pandas-stubs[dev]>=3.0.0.260204",
     "types-pyyaml[dev]>=6.0.12.20250915",
+    "scipy>=1.17.0",
 ]
 
 [project.optional-dependencies]
