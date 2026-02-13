@@ -4,7 +4,7 @@ Track sprint-over-sprint performance to calibrate future sprint sizing.
 
 | Sprint | Date | Goal | Planned | Done | Carry | ~Hours | Issues/Hr | Notes |
 |--------|------|------|---------|------|-------|--------|-----------|-------|
-| 1 | | | | | | | | First sprint |
+| 1 | 2026-02-13 | Foundation: schema, engine, indicators, definitions | 6 | 6 | 0 | ~0.5 | 12.0 | First sprint — setup + foundation |
 
 ## How to Read This
 
