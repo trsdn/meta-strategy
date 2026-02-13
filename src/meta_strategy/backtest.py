@@ -114,11 +114,11 @@ def supertrend_line(
         else:
             final_upper[i] = final_upper[i - 1]
 
-        # Direction
-        if direction[i - 1] == -1 and close.iloc[i] > final_lower[i - 1]:
-            direction[i] = 1
-        elif direction[i - 1] == 1 and close.iloc[i] < final_upper[i - 1]:
+        # Direction: bullish checks lower band (support), bearish checks upper band (resistance)
+        if direction[i - 1] == 1 and close.iloc[i] < final_lower[i]:
             direction[i] = -1
+        elif direction[i - 1] == -1 and close.iloc[i] > final_upper[i]:
+            direction[i] = 1
         else:
             direction[i] = direction[i - 1]
 
@@ -162,11 +162,11 @@ def supertrend_direction(
             final_upper[i] = upper_band.iloc[i]
         else:
             final_upper[i] = final_upper[i - 1]
-        # Direction
-        if direction[i - 1] == -1 and close.iloc[i] > final_lower[i - 1]:
-            direction[i] = 1
-        elif direction[i - 1] == 1 and close.iloc[i] < final_upper[i - 1]:
+        # Direction: bullish checks lower band (support), bearish checks upper band (resistance)
+        if direction[i - 1] == 1 and close.iloc[i] < final_lower[i]:
             direction[i] = -1
+        elif direction[i - 1] == -1 and close.iloc[i] > final_upper[i]:
+            direction[i] = 1
         else:
             direction[i] = direction[i - 1]
 
