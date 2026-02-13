@@ -22,20 +22,20 @@ jobs:
         run: command -v uv || curl -LsSf https://astral.sh/uv/install.sh | sh
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --extra dev
 
       - name: Lint with ruff
-        run: uv run --project . ruff check src/ tests/
+        run: uv run ruff check src/ tests/
 
       - name: Type check with mypy
-        run: uv run --project . mypy src/meta_strategy/ --ignore-missing-imports
+        run: uv run mypy src/meta_strategy/ --ignore-missing-imports
         continue-on-error: true
 
       - name: Run tests
-        run: uv run --project . python -m pytest tests/ -v --tb=short
+        run: uv run python -m pytest tests/ -v --tb=short
 
       - name: Security scan with bandit
-        run: uv run --project . bandit -r src/ -q
+        run: uv run bandit -r src/ -q
         continue-on-error: true
 
   validate:
@@ -48,7 +48,7 @@ jobs:
         run: command -v uv || curl -LsSf https://astral.sh/uv/install.sh | sh
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --extra dev
 
       - name: Check required files exist
         run: |
@@ -70,7 +70,7 @@ jobs:
 
       - name: Validate YAML strategy definitions
         run: |
-          uv run --project . python -c "
+          uv run python -c "
           import yaml, glob, sys
           errors = 0
           for f in glob.glob('strategies/definitions/*.yml'):
