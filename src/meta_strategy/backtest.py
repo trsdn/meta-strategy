@@ -243,6 +243,11 @@ class BollingerBandsStrategy(Strategy):
         elif self.data.Close[-1] < self.lower[-1]:
             self.position.close()
 
+    @classmethod
+    def warmup_indicators(cls, data: pd.DataFrame) -> list[pd.Series]:
+        close = data["Close"]
+        return [bollinger_upper(close, cls.length, cls.mult), bollinger_lower(close, cls.length, cls.mult)]
+
 
 class SuperTrendStrategy(Strategy):
     """SuperTrend trend-following.
@@ -266,6 +271,10 @@ class SuperTrendStrategy(Strategy):
         elif self.direction[-1] == -1 and self.direction[-2] == 1:
             self.position.close()
 
+    @classmethod
+    def warmup_indicators(cls, data: pd.DataFrame) -> list[pd.Series]:
+        return [supertrend_direction(data["High"], data["Low"], data["Close"], cls.period, cls.factor)]
+
 
 class BullMarketSupportBandStrategy(Strategy):
     """Bull Market Support Band (20w SMA + 21w EMA crossover).
@@ -288,6 +297,11 @@ class BullMarketSupportBandStrategy(Strategy):
                 self.buy()
         elif crossover(self.sma, self.ema):
             self.position.close()
+
+    @classmethod
+    def warmup_indicators(cls, data: pd.DataFrame) -> list[pd.Series]:
+        close = data["Close"]
+        return [weekly_sma(close, cls.sma_length), weekly_ema(close, cls.ema_length)]
 
 
 class RSIStrategy(Strategy):
@@ -313,6 +327,11 @@ class RSIStrategy(Strategy):
         elif self.rsi_val[-1] > self.overbought:
             self.position.close()
 
+    @classmethod
+    def warmup_indicators(cls, data: pd.DataFrame) -> list[pd.Series]:
+        close = data["Close"]
+        return [rsi(close, cls.rsi_length), sma(close, cls.sma_length)]
+
 
 class MACDStrategy(Strategy):
     """MACD crossover strategy.
@@ -335,6 +354,11 @@ class MACDStrategy(Strategy):
                 self.buy()
         elif crossover(self.signal, self.macd):
             self.position.close()
+
+    @classmethod
+    def warmup_indicators(cls, data: pd.DataFrame) -> list[pd.Series]:
+        close = data["Close"]
+        return [macd_line(close, cls.fast, cls.slow), macd_signal(close, cls.fast, cls.slow, cls.signal_length)]
 
 
 class ConfluenceStrategy(Strategy):
@@ -369,6 +393,17 @@ class ConfluenceStrategy(Strategy):
                 self.buy()
         elif self.data.Close[-1] < self.bb_lower[-1] or self.rsi_val[-1] > 80:
             self.position.close()
+
+    @classmethod
+    def warmup_indicators(cls, data: pd.DataFrame) -> list[pd.Series]:
+        close = data["Close"]
+        return [
+            bollinger_upper(close, cls.bb_length, cls.bb_mult),
+            bollinger_lower(close, cls.bb_length, cls.bb_mult),
+            rsi(close, cls.rsi_length),
+            macd_line(close, cls.macd_fast, cls.macd_slow),
+            macd_signal(close, cls.macd_fast, cls.macd_slow, cls.macd_signal_len),
+        ]
 
 
 # === Data fetching ===
@@ -468,41 +503,12 @@ def run_backtest(
 def detect_warmup(strategy_cls: type[Strategy], data: pd.DataFrame) -> int:
     """Detect warmup bars by calculating indicators and finding first valid bar.
 
-    Runs strategy indicator functions directly to find where NaN values end.
+    Uses each strategy's warmup_indicators() classmethod for indicator calculation.
     """
-    close = data["Close"]
-    high = data.get("High", close)
-    low = data.get("Low", close)
+    if not hasattr(strategy_cls, "warmup_indicators"):
+        return 0
 
-    indicators: list[pd.Series] = []
-
-    if strategy_cls is BollingerBandsStrategy:
-        indicators = [
-            bollinger_upper(close, strategy_cls.length, strategy_cls.mult),
-            bollinger_lower(close, strategy_cls.length, strategy_cls.mult),
-        ]
-    elif strategy_cls is SuperTrendStrategy:
-        indicators = [supertrend_direction(high, low, close, strategy_cls.period, strategy_cls.factor)]
-    elif strategy_cls is BullMarketSupportBandStrategy:
-        indicators = [
-            weekly_sma(close, strategy_cls.sma_length),
-            weekly_ema(close, strategy_cls.ema_length),
-        ]
-    elif strategy_cls is RSIStrategy:
-        indicators = [rsi(close, strategy_cls.rsi_length), sma(close, strategy_cls.sma_length)]
-    elif strategy_cls is MACDStrategy:
-        indicators = [
-            macd_line(close, strategy_cls.fast, strategy_cls.slow),
-            macd_signal(close, strategy_cls.fast, strategy_cls.slow, strategy_cls.signal_length),
-        ]
-    elif strategy_cls is ConfluenceStrategy:
-        indicators = [
-            bollinger_upper(close, strategy_cls.bb_length, strategy_cls.bb_mult),
-            bollinger_lower(close, strategy_cls.bb_length, strategy_cls.bb_mult),
-            rsi(close, strategy_cls.rsi_length),
-            macd_line(close, strategy_cls.macd_fast, strategy_cls.macd_slow),
-            macd_signal(close, strategy_cls.macd_fast, strategy_cls.macd_slow, strategy_cls.macd_signal_len),
-        ]
+    indicators: list[pd.Series] = strategy_cls.warmup_indicators(data)
 
     if not indicators:
         return 0
