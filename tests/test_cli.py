@@ -31,11 +31,11 @@ def _write_template(tmp_path: Path) -> Path:
     """Helper to write a minimal prompt template."""
     template = tmp_path / "prompt.md"
     template.write_text(
-        'You are a professional PineScript version=6 developer.\n'
-        'Go Long when…\n'
-        'Close Long when…\n'
+        "You are a professional PineScript version=6 developer.\n"
+        "Go Long when…\n"
+        "Close Long when…\n"
         'strategy("NAME", overlay=true)\n'
-        '[YOUR STRATEGY CODE GOES HERE]\n'
+        "[YOUR STRATEGY CODE GOES HERE]\n"
     )
     return template
 

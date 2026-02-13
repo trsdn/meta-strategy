@@ -13,12 +13,12 @@ def template_file(tmp_path):
     """Create a minimal prompt template."""
     template = tmp_path / "prompt.md"
     template.write_text(
-        'You are a professional PineScript version=6 developer.\n'
-        'Go Long when…\n'
-        'Close Long when…\n'
+        "You are a professional PineScript version=6 developer.\n"
+        "Go Long when…\n"
+        "Close Long when…\n"
         'strategy("NAME", overlay=true)\n'
-        'This is the code of the Indicator:\n'
-        '[YOUR STRATEGY CODE GOES HERE]\n'
+        "This is the code of the Indicator:\n"
+        "[YOUR STRATEGY CODE GOES HERE]\n"
     )
     return template
 
@@ -49,8 +49,8 @@ def test_basic_rendering(template_file, definition):
     assert "Go Long when close is above the upper band" in result
     assert "Close Long when close is below the lower band" in result
     assert 'strategy("AI - Test Strategy"' in result
-    assert '//@version=5' in result
-    assert 'plot(close)' in result
+    assert "//@version=5" in result
+    assert "plot(close)" in result
     assert "[YOUR STRATEGY CODE GOES HERE]" not in result
 
 
