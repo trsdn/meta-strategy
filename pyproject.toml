@@ -1,6 +1,6 @@
 [project]
 name = "meta-strategy"
-version = "0.2.0"
+version = "0.3.0"
 description = "AI-powered TradingView indicator-to-strategy converter using Pine Script v6"
 readme = "README.md"
 requires-python = ">=3.11"
