@@ -24,3 +24,13 @@
 **Plan check**: No changes. Moving to #31 (rolling window) next — unblocks #32 (expanding window).
 
 **Next up**: #31 — Rolling window walk-forward
+
+### Huddle — After Issues #31 + #32
+
+**Completed**: #31 + #32 — Rolling and expanding window modes for walk-forward (PR #38). Combined into one PR.
+**Sprint progress**: 4/6 issues done
+**Key learning**: Fold generators as Python generators keep the code clean. Combining related issues reduces overhead.
+
+**Plan check**: No changes. #35 (overfitting warning) dependency on #34 is unblocked. Then #33 (param stability).
+
+**Next up**: #35 — Overfitting warning for optimize

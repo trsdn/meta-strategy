@@ -278,6 +278,11 @@ def optimize(
         best = results[0]
         if has_split:
             typer.echo(f"\n🏆 Best params: {best['params']} (OOS Sharpe: {best['sharpe_ratio']:.2f}, IS Sharpe: {best['is_sharpe_ratio']:.2f})")
+            from .backtest import check_overfitting
+            warning = check_overfitting(best)
+            if warning:
+                ratio_str = f"{warning['ratio']:.1f}×" if warning["ratio"] != float("inf") else "∞×"
+                typer.echo(f"\n⚠️  OVERFITTING WARNING: In-sample Sharpe ({warning['is_sharpe']:.2f}) is {ratio_str} out-of-sample Sharpe ({warning['oos_sharpe']:.2f}). Results may not generalize.")
         else:
             typer.echo(f"\n🏆 Best params: {best['params']} (Sharpe: {best['sharpe_ratio']:.2f}, Return: {best['return_pct']:.2f}%)")
 

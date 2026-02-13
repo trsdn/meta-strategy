@@ -427,3 +427,37 @@ def test_optimize_invalid_split_raises():
         optimize_strategy("bollinger-bands", split=0.0)
     with pytest.raises(ValueError, match="split must be"):
         optimize_strategy("bollinger-bands", split=1.5)
+
+
+def test_check_overfitting_warns_on_high_ratio():
+    """check_overfitting returns warning when IS Sharpe > 2× OOS Sharpe."""
+    from meta_strategy.backtest import check_overfitting
+    result = {"is_sharpe_ratio": 3.0, "sharpe_ratio": 1.0, "params": {}}
+    warning = check_overfitting(result)
+    assert warning is not None
+    assert warning["ratio"] == 3.0
+    assert warning["is_sharpe"] == 3.0
+    assert warning["oos_sharpe"] == 1.0
+
+
+def test_check_overfitting_no_warning_when_reasonable():
+    """check_overfitting returns None when ratio is acceptable."""
+    from meta_strategy.backtest import check_overfitting
+    result = {"is_sharpe_ratio": 1.5, "sharpe_ratio": 1.0, "params": {}}
+    assert check_overfitting(result) is None
+
+
+def test_check_overfitting_skips_without_split():
+    """check_overfitting returns None when no IS metrics (split=1.0)."""
+    from meta_strategy.backtest import check_overfitting
+    result = {"sharpe_ratio": 1.5, "params": {}}
+    assert check_overfitting(result) is None
+
+
+def test_check_overfitting_warns_on_negative_oos():
+    """check_overfitting warns when OOS is negative but IS is positive."""
+    from meta_strategy.backtest import check_overfitting
+    result = {"is_sharpe_ratio": 2.0, "sharpe_ratio": -0.5, "params": {}}
+    warning = check_overfitting(result)
+    assert warning is not None
+    assert warning["ratio"] == float("inf")

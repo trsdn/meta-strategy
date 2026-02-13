@@ -578,6 +578,26 @@ def optimize_strategy(
     return results
 
 
+def check_overfitting(result: dict, threshold: float = 2.0) -> dict | None:
+    """Check if best optimize result shows overfitting (IS Sharpe >> OOS Sharpe).
+
+    Returns warning dict with details if overfitting detected, None otherwise.
+    Requires result to have 'is_sharpe_ratio' (i.e., split was active).
+    """
+    if "is_sharpe_ratio" not in result:
+        return None
+    is_sharpe = result["is_sharpe_ratio"]
+    oos_sharpe = result["sharpe_ratio"]
+    if oos_sharpe <= 0:
+        if is_sharpe > 0:
+            return {"is_sharpe": is_sharpe, "oos_sharpe": oos_sharpe, "ratio": float("inf")}
+        return None
+    ratio = is_sharpe / oos_sharpe
+    if ratio > threshold:
+        return {"is_sharpe": is_sharpe, "oos_sharpe": oos_sharpe, "ratio": round(ratio, 2)}
+    return None
+
+
 # === Walk-forward analysis (#15) ===
 
 def _optimize_on_data(train_data, strategy_cls, grid, cash, commission):
