@@ -41,10 +41,10 @@ When making a significant architectural decision, document it here using this fo
 
 ---
 
-## ADR-001: Example Decision — Use GitHub Issues as Sole Task System
+## ADR-001: Use GitHub Issues as Sole Task System
 
 **Status**: Accepted
-**Date**: {{DATE}}
+**Date**: 2026-02-13
 
 ### Context
 
@@ -69,3 +69,62 @@ GitHub Issues is the ONLY task tracking system. All work items, bugs, features, 
 
 **Risks:**
 - Team members may forget to create issues for discovered work
+
+---
+
+## ADR-002: YAML-Driven Strategy Definitions
+
+**Status**: Accepted
+**Date**: 2026-02-13
+
+### Context
+
+Each trading strategy needs entry/exit rules, indicator source code reference, and configuration parameters. Hardcoding these in Python makes it difficult to add new strategies and creates merge conflicts.
+
+### Decision
+
+Strategy definitions live in YAML files under `strategies/definitions/`. Each YAML defines: indicator name, source code path, entry conditions, exit conditions, and any special instructions (e.g., "fill gaps", "invert logic"). The Python tool reads these definitions to generate Pine Script strategies.
+
+### Consequences
+
+**Positive:**
+- Adding a new strategy requires only a new YAML file
+- Strategy definitions are version-controlled and diffable
+- Clear separation of strategy logic from generation code
+- Non-developers can define strategies
+
+**Negative:**
+- YAML parsing adds a dependency
+- Schema must be well-documented to avoid invalid configs
+
+**Risks:**
+- YAML schema evolution may require migration scripts
+
+---
+
+## ADR-003: Pine Script v6 Only
+
+**Status**: Accepted
+**Date**: 2026-02-13
+
+### Context
+
+TradingView supports Pine Script versions 1-6. The prompt template in `prompt.md` targets v6. Supporting multiple versions adds complexity.
+
+### Decision
+
+All generated strategies target Pine Script v6 exclusively. The prompt template specifies `version=6`. No backward compatibility with v5 or earlier.
+
+### Consequences
+
+**Positive:**
+- Single target reduces complexity
+- v6 is the latest and most capable version
+- Consistent syntax across all strategies
+
+**Negative:**
+- Users on older TradingView plans may have limitations
+- Some community indicators may use older syntax that needs translation
+
+**Risks:**
+- TradingView may release v7, requiring prompt updates

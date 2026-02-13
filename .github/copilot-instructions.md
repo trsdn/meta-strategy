@@ -1,4 +1,4 @@
-# {{PROJECT_NAME}} — Copilot Instructions
+# Meta Strategy — Copilot Instructions
 
 > **Cross-references** (read automatically — do NOT duplicate content from these):
 > - `AGENTS.md` — project-specific instructions, available agents and prompts
@@ -7,7 +7,7 @@
 
 ## Project Overview
 
-**{{PROJECT_NAME}}** — {{PROJECT_DESCRIPTION}}
+**Meta Strategy** — AI-powered TradingView indicator-to-strategy converter. Translates visual Pine Script indicators into backtestable strategy scripts using a structured prompt template, with entry/exit logic for strategies like Bull Market Support Band, Bollinger Bands, and SuperTrend.
 
 ## Project Priorities
 
