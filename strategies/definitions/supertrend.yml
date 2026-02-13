@@ -1,0 +1,12 @@
+# SuperTrend Strategy
+# Based on ATR-based trend-following indicator
+
+name: "SuperTrend"
+indicator_source: "strategies/indicators/supertrend.pine"
+
+entry_condition: "the SuperTrend line turns Green (price closes above the SuperTrend line, direction changes to bullish)"
+exit_condition: "the SuperTrend line turns Red (price closes below the SuperTrend line, direction changes to bearish)"
+
+special_instructions:
+  - "CRITICAL: The AI will likely INVERT the logic (buying on Red, selling on Green). Verify the trades on the chart. The correct logic is: Buy when Trend is Green (direction == 1), Sell when Trend is Red (direction == -1)."
+  - "Switch the logic if inverted: Buy when Trend is Green, Sell when Trend is Red."

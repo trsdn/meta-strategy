@@ -1,0 +1,12 @@
+# Bollinger Bands — Trend-Following Breakout Strategy
+# Expected result: ~1,187% Net Profit (from input.md)
+
+name: "Bollinger Bands"
+indicator_source: "strategies/indicators/bollinger-bands.pine"
+
+entry_condition: "the Close Price is ABOVE the Upper Bollinger Band (buying strength — breakout above)"
+exit_condition: "the Close Price is BELOW the Lower Bollinger Band"
+
+special_instructions:
+  - "IMPORTANT: Buy when close is above upper band, Sell when close is below lower band. The AI often guesses the opposite (mean reversion). This is a TREND FOLLOWING breakout strategy, not mean reversion."
+  - "The strategy enters/exits on the next candle open after the condition is met (standard Pine Script behavior)."

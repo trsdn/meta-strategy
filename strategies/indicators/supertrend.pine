@@ -1,0 +1,29 @@
+// Source: TradingView Built-in Indicator (SuperTrend)
+// Attribution: Standard SuperTrend implementation matching TradingView's built-in indicator
+// Used as input for AI-powered strategy conversion
+
+//@version=5
+indicator("SuperTrend", overlay=true)
+
+atrPeriod = input.int(10, "ATR Period")
+factor = input.float(3.0, "Multiplier")
+src = input(hl2, "Source")
+
+atr2 = ta.atr(atrPeriod)
+
+upperBand = src + factor * atr2
+lowerBand = src - factor * atr2
+
+prevUpperBand = nz(upperBand[1], upperBand)
+prevLowerBand = nz(lowerBand[1], lowerBand)
+
+lowerBand := lowerBand > prevLowerBand or close[1] < prevLowerBand ? lowerBand : prevLowerBand
+upperBand := upperBand < prevUpperBand or close[1] > prevUpperBand ? upperBand : prevUpperBand
+
+var int direction = 1
+direction := direction == -1 and close > prevLowerBand ? 1 : direction == 1 and close < prevUpperBand ? -1 : direction
+
+superTrend = direction == 1 ? lowerBand : upperBand
+bodyMiddle = plot((open + close) / 2, display=display.none)
+trend = plot(superTrend, color=direction == 1 ? color.green : color.red, linewidth=2, title="SuperTrend")
+fill(bodyMiddle, trend, color=direction == 1 ? color.new(color.green, 90) : color.new(color.red, 90))

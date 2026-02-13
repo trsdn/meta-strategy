@@ -1,0 +1,14 @@
+# Bull Market Support Band Strategy
+# Uses 20-week SMA and 21-week EMA crossover
+# Expected result: ~736% Net Profit (from input.md)
+
+name: "Bull Market Support Band"
+indicator_source: "strategies/indicators/bull-market-support-band.pine"
+
+entry_condition: "the two EMAs (20w SMA and 21w EMA) cross to the upside (bullish crossover)"
+exit_condition: "the two EMAs (20w SMA and 21w EMA) cross to the downside (bearish crossunder)"
+
+special_instructions:
+  - "IMPORTANT: You MUST fill gaps. Without this, the strategy lines will look like a staircase (visual glitch) because the strategy calculates on the weekly timeframe. Use gaps=barmerge.gaps_off or fillgaps=true in request.security() calls."
+  - "The indicator uses request.security() to fetch weekly data. Preserve this timeframe logic in the strategy version."
+  - "Set plot offsets to 0 to preserve visual alignment."
