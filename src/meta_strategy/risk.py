@@ -12,7 +12,6 @@ from backtesting import Backtest
 
 from .backtest import STRATEGIES, fetch_data
 
-
 # === Extended Risk Metrics (#24) ===
 
 def compute_risk_metrics(equity_series: pd.Series, risk_free_rate: float = 0.0) -> dict:

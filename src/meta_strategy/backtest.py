@@ -68,7 +68,9 @@ def bollinger_lower(close: pd.Series, length: int = 20, mult: float = 2.0) -> pd
     return basis - dev
 
 
-def supertrend_line(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 10, factor: float = 3.0) -> pd.Series:
+def supertrend_line(
+    high: pd.Series, low: pd.Series, close: pd.Series, period: int = 10, factor: float = 3.0
+) -> pd.Series:
     """Calculate SuperTrend line. Returns the supertrend value per bar."""
     high, low, close = pd.Series(high), pd.Series(low), pd.Series(close)
     hl2 = (high + low) / 2
@@ -123,7 +125,9 @@ def supertrend_line(high: pd.Series, low: pd.Series, close: pd.Series, period: i
     return pd.Series(st, index=close.index)
 
 
-def supertrend_direction(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 10, factor: float = 3.0) -> pd.Series:
+def supertrend_direction(
+    high: pd.Series, low: pd.Series, close: pd.Series, period: int = 10, factor: float = 3.0
+) -> pd.Series:
     """Returns +1 for bullish (green), -1 for bearish (red)."""
     high, low, close = pd.Series(high), pd.Series(low), pd.Series(close)
     hl2 = (high + low) / 2
@@ -250,7 +254,9 @@ class SuperTrendStrategy(Strategy):
     factor = 3.0
 
     def init(self):
-        self.direction = self.I(supertrend_direction, self.data.High, self.data.Low, self.data.Close, self.period, self.factor)
+        self.direction = self.I(
+            supertrend_direction, self.data.High, self.data.Low, self.data.Close, self.period, self.factor
+        )
 
     def next(self):
         if not self.position:
@@ -544,7 +550,7 @@ def optimize_strategy(
 
     results = []
     for combo in combinations:
-        params = dict(zip(param_names, combo))
+        params = dict(zip(param_names, combo, strict=True))
         try:
             bt_train = Backtest(train_data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
             train_stats = bt_train.run(**params)
@@ -608,7 +614,7 @@ def _optimize_on_data(train_data, strategy_cls, grid, cash, commission):
         import itertools
         param_names = list(grid.keys())
         for combo in itertools.product(*grid.values()):
-            params = dict(zip(param_names, combo))
+            params = dict(zip(param_names, combo, strict=True))
             try:
                 bt = Backtest(train_data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
                 stats = bt.run(**params)
@@ -627,14 +633,17 @@ def _evaluate_fold(train_data, test_data, strategy_cls, grid, cash, commission, 
     try:
         bt = Backtest(test_data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
         test_stats = bt.run(**best_params)
+        train_period = f"{train_data.index[0].strftime('%Y-%m-%d')} → {train_data.index[-1].strftime('%Y-%m-%d')}"
+        test_period = f"{test_data.index[0].strftime('%Y-%m-%d')} → {test_data.index[-1].strftime('%Y-%m-%d')}"
+        test_sharpe = round(float(test_stats["Sharpe Ratio"]), 2) if not pd.isna(test_stats["Sharpe Ratio"]) else 0.0
         return {
             "fold": fold_num,
-            "train_period": f"{train_data.index[0].strftime('%Y-%m-%d')} → {train_data.index[-1].strftime('%Y-%m-%d')}",
-            "test_period": f"{test_data.index[0].strftime('%Y-%m-%d')} → {test_data.index[-1].strftime('%Y-%m-%d')}",
+            "train_period": train_period,
+            "test_period": test_period,
             "best_params": best_params,
             "train_sharpe": round(best_sharpe, 2) if best_sharpe > -999 else 0.0,
             "test_return_pct": round(float(test_stats["Return [%]"]), 2),
-            "test_sharpe": round(float(test_stats["Sharpe Ratio"]), 2) if not pd.isna(test_stats["Sharpe Ratio"]) else 0.0,
+            "test_sharpe": test_sharpe,
             "test_trades": int(test_stats["# Trades"]),
             "test_max_dd_pct": round(float(test_stats["Max. Drawdown [%]"]), 2),
         }

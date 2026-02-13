@@ -4,7 +4,6 @@ Takes a prompt template (prompt.md) and a StrategyDefinition,
 produces a filled prompt ready for AI consumption.
 """
 
-import re
 from pathlib import Path
 
 from .models import StrategyDefinition

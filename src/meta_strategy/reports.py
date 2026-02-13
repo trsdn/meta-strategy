@@ -6,13 +6,11 @@ and exports results to CSV/JSON formats.
 
 from __future__ import annotations
 
-import json
 import csv
-import io
-from pathlib import Path
+import json
 from datetime import datetime
+from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from backtesting import Backtest
 
@@ -63,7 +61,8 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Backtest Report — {title}</title>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; margin: 2rem; background: #0d1117; color: #c9d1d9; }}
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+         margin: 2rem; background: #0d1117; color: #c9d1d9; }}
   h1 {{ color: #58a6ff; }}
   h2 {{ color: #79c0ff; border-bottom: 1px solid #30363d; padding-bottom: 0.5rem; }}
   table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; }}
@@ -128,15 +127,24 @@ def _svg_equity_chart(equity_curves: dict[str, pd.Series], width: int = 800, hei
             y = margin["top"] + plot_h - ((v - y_min) / y_range) * plot_h
             points.append(f"{x:.1f},{y:.1f}")
 
-        lines.append(f'<polyline points="{" ".join(points)}" fill="none" stroke="{color}" stroke-width="1.5" opacity="0.9"/>')
-        legend_items.append(f'<span class="legend-item"><span class="legend-dot" style="background:{color}"></span>{name}</span>')
+        lines.append(
+            f'<polyline points="{" ".join(points)}" fill="none" stroke="{color}" '
+            f'stroke-width="1.5" opacity="0.9"/>'
+        )
+        legend_items.append(
+            f'<span class="legend-item"><span class="legend-dot" '
+            f'style="background:{color}"></span>{name}</span>'
+        )
 
     # Y-axis labels
     y_labels = ""
     for i in range(5):
         val = y_min + (y_range * i / 4)
         y_pos = margin["top"] + plot_h - (i / 4) * plot_h
-        y_labels += f'<text x="{margin["left"] - 10}" y="{y_pos + 4}" fill="#8b949e" font-size="11" text-anchor="end">${val:,.0f}</text>'
+        y_labels += (
+            f'<text x="{margin["left"] - 10}" y="{y_pos + 4}" '
+            f'fill="#8b949e" font-size="11" text-anchor="end">${val:,.0f}</text>'
+        )
 
     svg = f"""<div class="chart">
 <svg viewBox="0 0 {width} {height}">
@@ -213,7 +221,7 @@ def generate_dashboard(
 
     # Table
     rows = ""
-    for name, (r, _) in results_and_equity.items():
+    for _name, (r, _) in results_and_equity.items():
         ret_class = "positive" if r["return_pct"] > 0 else "negative"
         rows += f"""<tr>
   <td>{r['strategy']}</td>
@@ -239,7 +247,8 @@ def generate_dashboard(
     content = f"""
 <h2>All Strategies — {symbol}</h2>
 <table>
-  <tr><th>Strategy</th><th>Return</th><th>Buy &amp; Hold</th><th>Win Rate</th><th>Trades</th><th>Max DD</th><th>Sharpe</th><th>Final Equity</th></tr>
+  <tr><th>Strategy</th><th>Return</th><th>Buy &amp; Hold</th><th>Win Rate</th>
+      <th>Trades</th><th>Max DD</th><th>Sharpe</th><th>Final Equity</th></tr>
   {rows}
 </table>
 {best_line}
@@ -274,7 +283,7 @@ def export_results_csv(results: list[dict], output_path: str) -> None:
     if not results:
         return
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = [k for k in results[0].keys() if k != "error"]
+    fieldnames = [k for k in results[0] if k != "error"]
     with open(output_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()

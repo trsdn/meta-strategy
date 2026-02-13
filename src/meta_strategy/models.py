@@ -17,8 +17,12 @@ class StrategyDefinition(BaseModel):
     indicator_source: str = Field(description="Path to Pine Script indicator source file")
     entry_condition: str = Field(description="When to go Long (natural language)")
     exit_condition: str = Field(description="When to close Long (natural language)")
-    special_instructions: list[str] = Field(default_factory=list, description="Additional instructions for the AI conversion")
-    strategy_params: dict[str, str | int | float | bool] = Field(default_factory=dict, description="Override default strategy parameters")
+    special_instructions: list[str] = Field(
+        default_factory=list, description="Additional instructions for the AI conversion"
+    )
+    strategy_params: dict[str, str | int | float | bool] = Field(
+        default_factory=dict, description="Override default strategy parameters"
+    )
 
     def resolve_indicator_path(self, base_dir: Path | None = None) -> Path:
         """Resolve the indicator source path relative to base_dir."""
