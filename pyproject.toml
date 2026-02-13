@@ -9,6 +9,9 @@ dependencies = [
     "pydantic>=2.0",
     "pyyaml>=6.0",
     "typer>=0.9",
+    "backtesting>=0.3.3",
+    "yfinance>=0.2",
+    "pandas>=2.0",
 ]
 
 [project.optional-dependencies]
