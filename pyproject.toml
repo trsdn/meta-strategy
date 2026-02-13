@@ -12,6 +12,8 @@ dependencies = [
     "backtesting>=0.3.3",
     "yfinance>=0.2",
     "pandas>=2.0",
+    "pandas-stubs[dev]>=3.0.0.260204",
+    "types-pyyaml[dev]>=6.0.12.20250915",
 ]
 
 [project.optional-dependencies]
@@ -48,7 +50,11 @@ ignore = ["B008"]
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = false
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["backtesting.*", "yfinance.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
