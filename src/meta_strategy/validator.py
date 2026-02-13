@@ -52,26 +52,30 @@ def validate_pine_script(content: str) -> list[ValidationWarning]:
 def _check_lookahead(line_num: int, line: str) -> list[ValidationWarning]:
     """Detect lookahead_on usage — this is cheating in backtests."""
     if "lookahead_on" in line or "lookahead=barmerge.lookahead_on" in line:
-        return [ValidationWarning(
-            line_number=line_num,
-            severity=Severity.CRITICAL,
-            rule="no-lookahead",
-            message="lookahead_on detected — this produces false backtest results",
-            suggestion="Remove lookahead_on or use barmerge.lookahead_off",
-        )]
+        return [
+            ValidationWarning(
+                line_number=line_num,
+                severity=Severity.CRITICAL,
+                rule="no-lookahead",
+                message="lookahead_on detected — this produces false backtest results",
+                suggestion="Remove lookahead_on or use barmerge.lookahead_off",
+            )
+        ]
     return []
 
 
 def _check_missing_gap_fill(line_num: int, line: str) -> list[ValidationWarning]:
     """Detect request.security() calls without gap filling."""
     if "request.security(" in line and "gaps" not in line and "fillgaps" not in line.lower():
-        return [ValidationWarning(
-            line_number=line_num,
-            severity=Severity.WARNING,
-            rule="fill-gaps",
-            message="request.security() without gap filling — may cause staircase lines",
-            suggestion="Add gaps=barmerge.gaps_off or fillgaps=true",
-        )]
+        return [
+            ValidationWarning(
+                line_number=line_num,
+                severity=Severity.WARNING,
+                rule="fill-gaps",
+                message="request.security() without gap filling — may cause staircase lines",
+                suggestion="Add gaps=barmerge.gaps_off or fillgaps=true",
+            )
+        ]
     return []
 
 
@@ -84,23 +88,30 @@ def _check_invalid_variables(line_num: int, line: str) -> list[ValidationWarning
         return []
     # Only flag when used as standalone variables, not inside strategy() params
     if "strategy.commission.percent" in line and "commission_type" not in line:
-        warnings.append(ValidationWarning(
-            line_number=line_num,
-            severity=Severity.CRITICAL,
-            rule="invalid-variable",
-            message="strategy.commission.percent used as variable — does not exist in Pine Script",
-            suggestion="Set commission in the strategy() function: commission_type=strategy.commission.percent",
-        ))
-    if ("strategy.slippage" in line and "slippage" not in line.split("strategy.slippage")[0]
-            and not re.search(r'strategy\s*\(.*strategy\.slippage', line)
-            and (stripped.startswith("strategy.slippage") or "= strategy.slippage" in line)):
-        warnings.append(ValidationWarning(
-            line_number=line_num,
-            severity=Severity.CRITICAL,
-            rule="invalid-variable",
-            message="strategy.slippage used as variable — does not exist in Pine Script",
-            suggestion="Set slippage in the strategy() function: slippage=N",
-        ))
+        warnings.append(
+            ValidationWarning(
+                line_number=line_num,
+                severity=Severity.CRITICAL,
+                rule="invalid-variable",
+                message="strategy.commission.percent used as variable — does not exist in Pine Script",
+                suggestion="Set commission in the strategy() function: commission_type=strategy.commission.percent",
+            )
+        )
+    if (
+        "strategy.slippage" in line
+        and "slippage" not in line.split("strategy.slippage")[0]
+        and not re.search(r"strategy\s*\(.*strategy\.slippage", line)
+        and (stripped.startswith("strategy.slippage") or "= strategy.slippage" in line)
+    ):
+        warnings.append(
+            ValidationWarning(
+                line_number=line_num,
+                severity=Severity.CRITICAL,
+                rule="invalid-variable",
+                message="strategy.slippage used as variable — does not exist in Pine Script",
+                suggestion="Set slippage in the strategy() function: slippage=N",
+            )
+        )
     return warnings
 
 
@@ -110,13 +121,15 @@ def _check_strategy_name_prefix(line_num: int, line: str) -> list[ValidationWarn
     if match:
         name = match.group(1)
         if not name.startswith("AI - "):
-            return [ValidationWarning(
-                line_number=line_num,
-                severity=Severity.INFO,
-                rule="name-prefix",
-                message=f'Strategy name "{name}" does not start with "AI - "',
-                suggestion=f'Rename to "AI - {name}"',
-            )]
+            return [
+                ValidationWarning(
+                    line_number=line_num,
+                    severity=Severity.INFO,
+                    rule="name-prefix",
+                    message=f'Strategy name "{name}" does not start with "AI - "',
+                    suggestion=f'Rename to "AI - {name}"',
+                )
+            ]
     return []
 
 
@@ -147,13 +160,15 @@ def _check_line_breaks_in_calls(lines: list[str]) -> list[ValidationWarning]:
                     continue
                 # If next line is indented and doesn't start a new statement, likely a broken call
                 if lines[j].startswith(" ") or lines[j].startswith("\t"):
-                    warnings.append(ValidationWarning(
-                        line_number=i + 1,
-                        severity=Severity.WARNING,
-                        rule="no-line-breaks",
-                        message="Possible line break in function call/expression — Pine Script may not support this",
-                        suggestion="Put the entire expression on a single line",
-                    ))
+                    warnings.append(
+                        ValidationWarning(
+                            line_number=i + 1,
+                            severity=Severity.WARNING,
+                            rule="no-line-breaks",
+                            message="Possible line break in call/expression — Pine Script may not support this",
+                            suggestion="Put the entire expression on a single line",
+                        )
+                    )
                 break
 
     return warnings

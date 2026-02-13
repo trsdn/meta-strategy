@@ -14,6 +14,7 @@ from .backtest import STRATEGIES, fetch_data
 
 # === Extended Risk Metrics (#24) ===
 
+
 def compute_risk_metrics(equity_series: pd.Series, risk_free_rate: float = 0.0) -> dict:
     """Compute extended risk metrics from an equity curve.
 
@@ -101,6 +102,7 @@ def _empty_metrics() -> dict:
 
 
 # === Monte Carlo Simulation (#23) ===
+
 
 def monte_carlo(
     strategy_name: str,

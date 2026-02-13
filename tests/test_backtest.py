@@ -514,3 +514,66 @@ def test_walk_forward_includes_param_stability():
         assert "changes" in stability
     finally:
         bt_mod.fetch_data = original
+
+
+# === B&H normalization tests ===
+
+
+def test_detect_warmup_bollinger():
+    """BB warmup is 19 bars (20-period rolling needs 20 bars, first valid at index 19)."""
+    from meta_strategy.backtest import detect_warmup
+
+    data = _make_ohlcv([100 + i * 0.5 for i in range(200)])
+    warmup = detect_warmup(BollingerBandsStrategy, data)
+    assert warmup == 19
+
+
+def test_detect_warmup_supertrend():
+    """SuperTrend warmup is 0 (direction array has no NaN values)."""
+    from meta_strategy.backtest import detect_warmup
+
+    data = _make_ohlcv([100 + i * 0.5 for i in range(200)])
+    warmup = detect_warmup(SuperTrendStrategy, data)
+    assert warmup == 0  # SuperTrend direction initialized to 1, no NaN
+
+
+def test_detect_warmup_rsi_higher_than_bb():
+    """RSI strategy warmup > BB because of 200-period SMA."""
+    from meta_strategy.backtest import detect_warmup
+
+    data = _make_ohlcv([100 + i * 0.1 for i in range(500)])
+    bb_warmup = detect_warmup(BollingerBandsStrategy, data)
+    rsi_warmup = detect_warmup(RSIStrategy, data)
+    assert rsi_warmup > bb_warmup
+
+
+def test_run_all_backtests_identical_bh():
+    """All strategies in run_all_backtests() show identical B&H return."""
+    import meta_strategy.backtest as bt_mod
+
+    data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        results = bt_mod.run_all_backtests()
+        bh_values = [r["buy_hold_return_pct"] for r in results]
+        assert len(set(bh_values)) == 1, f"B&H should be identical, got {bh_values}"
+    finally:
+        bt_mod.fetch_data = original
+
+
+def test_run_all_backtests_has_effective_start():
+    """run_all_backtests results include effective_start and warmup_bars_trimmed."""
+    import meta_strategy.backtest as bt_mod
+
+    data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        results = bt_mod.run_all_backtests()
+        for r in results:
+            assert "effective_start" in r
+            assert "warmup_bars_trimmed" in r
+            assert r["warmup_bars_trimmed"] > 0
+    finally:
+        bt_mod.fetch_data = original

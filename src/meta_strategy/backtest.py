@@ -36,16 +36,16 @@ class Backtest(_FractionalBacktest):
             finally:
                 setattr(obj, attr, orig)
 
-        with _patch(self, '_data', self._FractionalBacktest__data):
+        with _patch(self, "_data", self._FractionalBacktest__data):
             result = original_run(self, **kwargs)
 
-        trades = result['_trades']
-        trades['Size'] *= self._fractional_unit
-        trades[['EntryPrice', 'ExitPrice', 'TP', 'SL']] /= self._fractional_unit
+        trades = result["_trades"]
+        trades["Size"] *= self._fractional_unit
+        trades[["EntryPrice", "ExitPrice", "TP", "SL"]] /= self._fractional_unit
 
-        indicators = result['_strategy']._indicators
+        indicators = result["_strategy"]._indicators
         for indicator in indicators:
-            if indicator._opts['overlay']:
+            if indicator._opts["overlay"]:
                 indicator.setflags(write=True)
                 indicator /= self._fractional_unit
 
@@ -53,6 +53,7 @@ class Backtest(_FractionalBacktest):
 
 
 # === Indicator functions (used by backtesting.py's self.I()) ===
+
 
 def bollinger_upper(close: pd.Series, length: int = 20, mult: float = 2.0) -> pd.Series:
     close = pd.Series(close)
@@ -75,11 +76,7 @@ def supertrend_line(
     high, low, close = pd.Series(high), pd.Series(low), pd.Series(close)
     hl2 = (high + low) / 2
     # ATR calculation
-    tr = pd.concat([
-        high - low,
-        (high - close.shift(1)).abs(),
-        (low - close.shift(1)).abs()
-    ], axis=1).max(axis=1)
+    tr = pd.concat([high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()], axis=1).max(axis=1)
     atr = tr.rolling(period).mean()
 
     upper_band = hl2 + factor * atr
@@ -131,11 +128,7 @@ def supertrend_direction(
     """Returns +1 for bullish (green), -1 for bearish (red)."""
     high, low, close = pd.Series(high), pd.Series(low), pd.Series(close)
     hl2 = (high + low) / 2
-    tr = pd.concat([
-        high - low,
-        (high - close.shift(1)).abs(),
-        (low - close.shift(1)).abs()
-    ], axis=1).max(axis=1)
+    tr = pd.concat([high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()], axis=1).max(axis=1)
     atr = tr.rolling(period).mean()
 
     upper_band = hl2 + factor * atr
@@ -222,6 +215,7 @@ def sma(close: pd.Series, length: int = 200) -> pd.Series:
 
 # === Strategy classes ===
 
+
 class BollingerBandsStrategy(Strategy):
     """Bollinger Bands trend-following breakout.
 
@@ -229,6 +223,7 @@ class BollingerBandsStrategy(Strategy):
     Exit: Close < Lower Band
     Expected: ~1,187% Net Profit (from input.md)
     """
+
     length = 20
     mult = 2.0
 
@@ -250,6 +245,7 @@ class SuperTrendStrategy(Strategy):
     Entry: Trend turns Green (direction changes from -1 to +1)
     Exit: Trend turns Red (direction changes from +1 to -1)
     """
+
     period = 10
     factor = 3.0
 
@@ -273,6 +269,7 @@ class BullMarketSupportBandStrategy(Strategy):
     Exit: EMA crosses below SMA (bearish crossunder)
     Expected: ~736% Net Profit (from input.md)
     """
+
     sma_length = 20
     ema_length = 21
 
@@ -294,6 +291,7 @@ class RSIStrategy(Strategy):
     Entry: RSI < 30 (oversold) AND close > 200 SMA (uptrend)
     Exit: RSI > 70 (overbought)
     """
+
     rsi_length = 14
     overbought = 70
     oversold = 30
@@ -317,6 +315,7 @@ class MACDStrategy(Strategy):
     Entry: MACD line crosses above signal line
     Exit: MACD line crosses below signal line
     """
+
     fast = 12
     slow = 26
     signal_length = 9
@@ -340,6 +339,7 @@ class ConfluenceStrategy(Strategy):
     Entry: Close > BB upper AND RSI < 70 AND MACD > Signal (momentum + breakout + not overbought)
     Exit: Close < BB lower OR RSI > 80
     """
+
     bb_length = 20
     bb_mult = 2.0
     rsi_length = 14
@@ -356,9 +356,11 @@ class ConfluenceStrategy(Strategy):
 
     def next(self):
         if not self.position:
-            if (self.data.Close[-1] > self.bb_upper[-1]
-                    and self.rsi_val[-1] < 70
-                    and self.macd_val[-1] > self.macd_sig[-1]):
+            if (
+                self.data.Close[-1] > self.bb_upper[-1]
+                and self.rsi_val[-1] < 70
+                and self.macd_val[-1] > self.macd_sig[-1]
+            ):
                 self.buy()
         elif self.data.Close[-1] < self.bb_lower[-1] or self.rsi_val[-1] > 80:
             self.position.close()
@@ -366,9 +368,11 @@ class ConfluenceStrategy(Strategy):
 
 # === Data fetching ===
 
+
 def fetch_data(symbol: str = "BTC-USD", start: str = "2018-01-01", end: str | None = None) -> pd.DataFrame:
     """Fetch OHLCV data via yfinance."""
     import yfinance as yf
+
     ticker = yf.Ticker(symbol)
     df = ticker.history(start=start, end=end, auto_adjust=True)
     # backtesting.py expects columns: Open, High, Low, Close, Volume
@@ -421,11 +425,85 @@ def run_backtest(
     }
 
 
+def detect_warmup(strategy_cls: type[Strategy], data: pd.DataFrame) -> int:
+    """Detect warmup bars by calculating indicators and finding first valid bar.
+
+    Runs strategy indicator functions directly to find where NaN values end.
+    """
+    close = data["Close"]
+    high = data.get("High", close)
+    low = data.get("Low", close)
+
+    indicators: list[pd.Series] = []
+
+    if strategy_cls is BollingerBandsStrategy:
+        indicators = [
+            bollinger_upper(close, strategy_cls.length, strategy_cls.mult),
+            bollinger_lower(close, strategy_cls.length, strategy_cls.mult),
+        ]
+    elif strategy_cls is SuperTrendStrategy:
+        indicators = [supertrend_direction(high, low, close, strategy_cls.period, strategy_cls.factor)]
+    elif strategy_cls is BullMarketSupportBandStrategy:
+        indicators = [
+            weekly_sma(close, strategy_cls.sma_length),
+            weekly_ema(close, strategy_cls.ema_length),
+        ]
+    elif strategy_cls is RSIStrategy:
+        indicators = [rsi(close, strategy_cls.rsi_length), sma(close, strategy_cls.sma_length)]
+    elif strategy_cls is MACDStrategy:
+        indicators = [
+            macd_line(close, strategy_cls.fast, strategy_cls.slow),
+            macd_signal(close, strategy_cls.fast, strategy_cls.slow, strategy_cls.signal_length),
+        ]
+    elif strategy_cls is ConfluenceStrategy:
+        indicators = [
+            bollinger_upper(close, strategy_cls.bb_length, strategy_cls.bb_mult),
+            bollinger_lower(close, strategy_cls.bb_length, strategy_cls.bb_mult),
+            rsi(close, strategy_cls.rsi_length),
+            macd_line(close, strategy_cls.macd_fast, strategy_cls.macd_slow),
+            macd_signal(close, strategy_cls.macd_fast, strategy_cls.macd_slow, strategy_cls.macd_signal_len),
+        ]
+
+    if not indicators:
+        return 0
+
+    first_valid = 0
+    for ind in indicators:
+        arr = np.asarray(ind, dtype=float)
+        valid_mask = ~np.isnan(arr)
+        if valid_mask.any():
+            first_valid = max(first_valid, int(np.argmax(valid_mask)))
+
+    return first_valid
+
+
 def run_all_backtests(symbol: str = "BTC-USD", start: str = "2018-01-01", **kwargs) -> list[dict]:
-    """Run all strategies and return results."""
+    """Run all strategies with normalized B&H baseline.
+
+    Each strategy runs on full data (so strategy returns are unaffected),
+    but B&H is recalculated from the max warmup bar across all strategies
+    so every strategy shows the same B&H for fair comparison.
+    """
+    data = fetch_data(symbol, start, kwargs.get("end"))
+
+    # Detect max warmup across all strategies
+    max_warmup = 0
+    for strategy_cls in STRATEGIES.values():
+        warmup = detect_warmup(strategy_cls, data)
+        max_warmup = max(max_warmup, warmup)
+
+    # Calculate normalized B&H from max_warmup bar
+    start_price = float(data["Close"].iloc[max_warmup])
+    end_price = float(data["Close"].iloc[-1])
+    normalized_bh = round((end_price / start_price - 1) * 100, 2)
+    effective_start = data.index[max_warmup].strftime("%Y-%m-%d")
+
     results = []
     for name in STRATEGIES:
         result = run_backtest(name, symbol=symbol, start=start, **kwargs)
+        result["buy_hold_return_pct"] = normalized_bh
+        result["effective_start"] = effective_start
+        result["warmup_bars_trimmed"] = max_warmup
         results.append(result)
     return results
 
@@ -449,19 +527,21 @@ def run_multi_asset(
             result = run_backtest(strategy_name, symbol=sym, start=start, **kwargs)
             results.append(result)
         except Exception as e:
-            results.append({
-                "strategy": strategy_name,
-                "symbol": sym,
-                "period": f"{start} → error",
-                "return_pct": 0.0,
-                "buy_hold_return_pct": 0.0,
-                "win_rate_pct": 0.0,
-                "num_trades": 0,
-                "max_drawdown_pct": 0.0,
-                "sharpe_ratio": 0.0,
-                "final_equity": 0.0,
-                "error": str(e),
-            })
+            results.append(
+                {
+                    "strategy": strategy_name,
+                    "symbol": sym,
+                    "period": f"{start} → error",
+                    "return_pct": 0.0,
+                    "buy_hold_return_pct": 0.0,
+                    "win_rate_pct": 0.0,
+                    "num_trades": 0,
+                    "max_drawdown_pct": 0.0,
+                    "sharpe_ratio": 0.0,
+                    "final_equity": 0.0,
+                    "error": str(e),
+                }
+            )
     return results
 
 
@@ -544,6 +624,7 @@ def optimize_strategy(
         test_data = None
 
     import itertools
+
     param_names = list(grid.keys())
     param_values = list(grid.values())
     combinations = list(itertools.product(*param_values))
@@ -606,12 +687,14 @@ def check_overfitting(result: dict, threshold: float = 2.0) -> dict | None:
 
 # === Walk-forward analysis (#15) ===
 
+
 def _optimize_on_data(train_data, strategy_cls, grid, cash, commission):
     """Find best params by grid search on training data. Returns (best_params, best_sharpe)."""
     best_params = {}
     best_sharpe = -999.0
     if grid:
         import itertools
+
         param_names = list(grid.keys())
         for combo in itertools.product(*grid.values()):
             params = dict(zip(param_names, combo, strict=True))
@@ -676,8 +759,8 @@ def _rolling_folds(data, train_bars, step):
     i = 0
     while i + train_bars + step <= n:
         fold_num += 1
-        train_data = data.iloc[i:i + train_bars]
-        test_data = data.iloc[i + train_bars:i + train_bars + step]
+        train_data = data.iloc[i : i + train_bars]
+        test_data = data.iloc[i + train_bars : i + train_bars + step]
         if len(train_data) < 30 or len(test_data) < 10:
             i += step
             continue
@@ -693,7 +776,7 @@ def _expanding_folds(data, train_bars, step):
     while train_end + step <= n:
         fold_num += 1
         train_data = data.iloc[:train_end]
-        test_data = data.iloc[train_end:train_end + step]
+        test_data = data.iloc[train_end : train_end + step]
         if len(train_data) < 30 or len(test_data) < 10:
             train_end += step
             continue
@@ -801,14 +884,16 @@ def param_stability_report(folds: list[dict]) -> dict:
             ref = max(abs(prev_val), abs(curr_val))
             pct_change = abs(curr_val - prev_val) / ref * 100 if ref != 0 else 0.0
             if pct_change > 50:
-                changes.append({
-                    "param": name,
-                    "fold_from": i,
-                    "fold_to": i + 1,
-                    "prev": prev_val,
-                    "curr": curr_val,
-                    "pct_change": round(pct_change, 1),
-                })
+                changes.append(
+                    {
+                        "param": name,
+                        "fold_from": i,
+                        "fold_to": i + 1,
+                        "prev": prev_val,
+                        "curr": curr_val,
+                        "pct_change": round(pct_change, 1),
+                    }
+                )
             else:
                 stable_checks += 1
 
