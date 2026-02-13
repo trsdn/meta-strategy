@@ -1,10 +1,10 @@
-# {{PROJECT_NAME}} — Agent Instructions
+# Meta Strategy — Agent Instructions
 
 These instructions apply to all Copilot agents working in this repository.
 
 ## Project Overview
 
-{{PROJECT_DESCRIPTION}}
+AI-powered TradingView indicator-to-strategy converter. Uses a meta-strategy workflow to translate visual TradingView indicators into backtestable Pine Script v6 strategy scripts using AI, with specific entry/exit logic for strategies like Bull Market Support Band, Bollinger Bands, and SuperTrend.
 
 ## Project Priorities
 
@@ -14,10 +14,11 @@ These instructions apply to all Copilot agents working in this repository.
 
 ## Repo Structure
 
-<!-- Customize for your project -->
-- `src/` — source code
+- `input.md` — research input / video content summaries for backtesting strategies
+- `prompt.md` — Pine Script v6 conversion prompt template
+- `src/` — source code (strategies, utilities)
 - `tests/` — test suite
-- `docs/` — documentation
+- `docs/` — documentation, sprint logs, ADRs
 - `scripts/` — utility scripts
 
 ## Key Commands

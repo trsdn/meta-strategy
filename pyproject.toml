@@ -1,7 +1,7 @@
 [project]
-name = "{{project-name}}"
+name = "meta-strategy"
 version = "0.1.0"
-description = "{{PROJECT_DESCRIPTION}}"
+description = "AI-powered TradingView indicator-to-strategy converter using Pine Script v6"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
