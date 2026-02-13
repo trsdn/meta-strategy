@@ -13,6 +13,7 @@ Track sprint-over-sprint performance to calibrate future sprint sizing.
 | 7 | 2026-02-13 | CI, Monte Carlo, risk metrics, docs | 4 | 4 | 0 | ~0.3 | 13.3 | Full robustness suite |
 | 8 | 2026-02-13 | Backtesting robustness: fractional, OOS, overfitting | 6 | 6+1 | 0 | ~1.5 | 4.7 | +1 unplanned (CI runner). Session restart mid-sprint. |
 | 9 | 2026-02-13 | Multi-timeframe, B&H normalization, lint cleanup | 5 | 5 | 0 | ~0.4 | 12.5 | Clean sprint, no blockers |
+| 10 | 2026-02-13 | Strategy artifacts, README, integration tests | 5 | 5 | 0 | ~0.25 | 20.0 | Fastest sprint — docs + tests, no complex code |
 
 ## How to Read This
 
@@ -24,8 +25,8 @@ Track sprint-over-sprint performance to calibrate future sprint sizing.
 
 ## Velocity Trends
 
-- **Average velocity**: ~9.9 issues/hr across 9 sprints
-- **Best sprint type**: Foundation/setup sprints (12-13 issues/hr)
+- **Average velocity**: ~11.1 issues/hr across 10 sprints
+- **Best sprint type**: Docs/artifacts sprints (20 issues/hr)
 - **Slowest sprint**: Sprint 8 (4.7 issues/hr) — session restart, CI runner setup, real debugging (numpy bug)
-- **Sprint 9 recovery**: 12.5 issues/hr — clean execution, no blockers
+- **Sprint 9-10 recovery**: 12.5-20.0 issues/hr — clean execution, no blockers
 - **Recommended sprint size**: 4-6 issues (complex features), 6-8 (routine)
