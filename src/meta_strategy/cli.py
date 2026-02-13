@@ -291,6 +291,65 @@ def walk_forward_cmd(
     typer.echo(f"📊 Average out-of-sample: Return {result['avg_test_return_pct']:.2f}%, Sharpe {result['avg_test_sharpe']:.2f}")
 
 
+@app.command()
+def report(
+    strategy_name: str = typer.Argument(..., help="Strategy name"),
+    symbol: str = typer.Option("BTC-USD", help="Asset symbol"),
+    start: str = typer.Option("2018-01-01", help="Start date"),
+    output: str = typer.Option("strategies/output/report.html", help="Output HTML path"),
+    cash: float = typer.Option(100_000.0, help="Initial capital"),
+) -> None:
+    """Generate HTML report with equity curve for a strategy."""
+    from .reports import generate_html_report
+
+    typer.echo(f"📝 Generating report for {strategy_name} on {symbol}...")
+    generate_html_report(strategy_name, symbol=symbol, start=start, cash=cash, output_path=output)
+    typer.echo(f"✅ Report saved to {output}")
+
+
+@app.command()
+def dashboard(
+    symbol: str = typer.Option("BTC-USD", help="Asset symbol"),
+    start: str = typer.Option("2018-01-01", help="Start date"),
+    output: str = typer.Option("strategies/output/dashboard.html", help="Output HTML path"),
+    cash: float = typer.Option(100_000.0, help="Initial capital"),
+) -> None:
+    """Generate comparison dashboard for all strategies."""
+    from .reports import generate_dashboard
+
+    typer.echo(f"📊 Generating dashboard for all strategies on {symbol}...")
+    generate_dashboard(symbol=symbol, start=start, cash=cash, output_path=output)
+    typer.echo(f"✅ Dashboard saved to {output}")
+
+
+@app.command()
+def export(
+    symbol: str = typer.Option("BTC-USD", help="Asset symbol"),
+    start: str = typer.Option("2018-01-01", help="Start date"),
+    fmt: str = typer.Option("json", help="Export format: json or csv"),
+    output: str = typer.Option("strategies/output/results", help="Output path (without extension)"),
+    cash: float = typer.Option(100_000.0, help="Initial capital"),
+) -> None:
+    """Export backtest results to CSV or JSON."""
+    from .backtest import run_all_backtests
+    from .reports import export_results_json, export_results_csv
+
+    typer.echo(f"📦 Running all strategies and exporting as {fmt}...")
+    results = run_all_backtests(symbol=symbol, start=start, cash=cash)
+
+    if fmt == "json":
+        path = f"{output}.json"
+        export_results_json(results, path)
+    elif fmt == "csv":
+        path = f"{output}.csv"
+        export_results_csv(results, path)
+    else:
+        typer.echo(f"❌ Unknown format: {fmt}. Use 'json' or 'csv'.", err=True)
+        raise typer.Exit(1)
+
+    typer.echo(f"✅ Results exported to {path}")
+
+
 def main() -> None:
     app()
 
