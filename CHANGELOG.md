@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.0.0 — Strategy Validation & Statistical Analysis
+
+### Added
+- **HTML validation report** — interactive report with equity curves, trade lists, and B&H comparison (`docs/validation-report.html`)
+- **Statistical significance tests** — Sharpe ratio t-test, paired t-test vs B&H, trade return significance, win rate binomial test (scipy)
+- **Trade markers toggle** — show/hide buy (▲ green) and sell (▼ red) triangles on equity charts
+- **Collapsible trade lists** — per-strategy entry/exit dates, prices, P&L, and return %
+- **Strict mypy** — `disallow_untyped_defs = true` across entire codebase
+- **Error path tests** — 10 tests covering invalid inputs, missing data, edge cases
+- **Warmup registry pattern** — `warmup_indicators()` classmethod per strategy
+
+### Fixed
+- **SuperTrend direction bug** (critical) — direction check compared wrong band, causing 1,366 false trades → fixed to 40 trades, -88% → +1,906%
+- **BMSB weekly approximation** — `weekly_sma`/`weekly_ema` (length × 5) replaced with native weekly interval, 289% → 2,039%
+
+### Changed
+- Version bump 0.3.0 → 1.0.0
+- All 3 core strategies validated against source video claims
+- Test count: 109 → 128
+- Added scipy dependency for statistical tests
+
 ## v0.3.0 — Backtesting Robustness & Multi-Timeframe
 
 ### Added
