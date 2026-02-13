@@ -34,13 +34,16 @@ def _make_ohlcv(close_prices: list[float], spread: float = 2.0) -> pd.DataFrame:
     high = close + spread
     low = close - spread
     opn = close - spread * 0.3
-    return pd.DataFrame({
-        "Open": opn,
-        "High": high,
-        "Low": low,
-        "Close": close,
-        "Volume": np.full(n, 1000.0),
-    }, index=pd.date_range("2020-01-01", periods=n, freq="D"))
+    return pd.DataFrame(
+        {
+            "Open": opn,
+            "High": high,
+            "Low": low,
+            "Close": close,
+            "Volume": np.full(n, 1000.0),
+        },
+        index=pd.date_range("2020-01-01", periods=n, freq="D"),
+    )
 
 
 def test_bollinger_bands_signal():
@@ -63,11 +66,13 @@ def test_supertrend_direction_calculation():
     # Create noisy data with clear regime change
     noise = np.random.normal(0, 5, n)
     # Uptrend then flat then sharp downtrend
-    trend = np.concatenate([
-        np.linspace(100, 200, 100),
-        np.full(50, 200),
-        np.linspace(200, 50, 150),
-    ])
+    trend = np.concatenate(
+        [
+            np.linspace(100, 200, 100),
+            np.full(50, 200),
+            np.linspace(200, 50, 150),
+        ]
+    )
     close = pd.Series(trend + noise)
     high = close + abs(np.random.normal(3, 1, n))
     low = close - abs(np.random.normal(3, 1, n))
@@ -87,12 +92,14 @@ def test_supertrend_strategy_trades():
     np.random.seed(123)
     n = 400
     noise = np.random.normal(0, 8, n)
-    trend = np.concatenate([
-        np.linspace(100, 300, 100),
-        np.linspace(300, 80, 100),
-        np.linspace(80, 250, 100),
-        np.linspace(250, 60, 100),
-    ])
+    trend = np.concatenate(
+        [
+            np.linspace(100, 300, 100),
+            np.linspace(300, 80, 100),
+            np.linspace(80, 250, 100),
+            np.linspace(250, 60, 100),
+        ]
+    )
     prices = (trend + noise).tolist()
     prices = [max(p, 10.0) for p in prices]
 
@@ -108,10 +115,12 @@ def test_bull_market_support_band_strategy():
     np.random.seed(42)
     n = 600  # Need enough data for weekly SMA/EMA (100+ days)
     # Long slow trend up then down
-    prices = np.concatenate([
-        np.linspace(100, 300, n // 2),
-        np.linspace(300, 100, n // 2),
-    ]).tolist()
+    prices = np.concatenate(
+        [
+            np.linspace(100, 300, n // 2),
+            np.linspace(300, 100, n // 2),
+        ]
+    ).tolist()
     data = _make_ohlcv(prices)
 
     bt = Backtest(data, BullMarketSupportBandStrategy, cash=10000, commission=0)
@@ -155,6 +164,7 @@ def test_weekly_sma_ema_lengths():
 
 
 # === Sprint 6 tests ===
+
 
 def test_rsi_indicator():
     """RSI returns values between 0 and 100."""
@@ -233,9 +243,11 @@ def test_confluence_strategy_runs():
 
 # === Sprint 4 tests ===
 
+
 def test_multi_asset_returns_results_per_symbol():
     """run_multi_asset returns one result per symbol."""
     from meta_strategy.backtest import run_multi_asset
+
     # Just test the function signature / error handling with a bad symbol
     results = run_multi_asset("bollinger-bands", symbols=["INVALID_SYMBOL_XYZ"])
     assert len(results) == 1
@@ -245,6 +257,7 @@ def test_multi_asset_returns_results_per_symbol():
 def test_default_assets_list():
     """DEFAULT_ASSETS contains expected symbols."""
     from meta_strategy.backtest import DEFAULT_ASSETS
+
     assert "BTC-USD" in DEFAULT_ASSETS
     assert "SPY" in DEFAULT_ASSETS
     assert len(DEFAULT_ASSETS) >= 4
@@ -253,6 +266,7 @@ def test_default_assets_list():
 def test_param_grids_defined():
     """Parameter grids exist for all strategies."""
     from meta_strategy.backtest import PARAM_GRIDS, STRATEGIES
+
     for name in STRATEGIES:
         assert name in PARAM_GRIDS, f"Missing param grid for {name}"
         assert len(PARAM_GRIDS[name]) >= 2, f"Grid for {name} needs at least 2 params"
@@ -261,9 +275,11 @@ def test_param_grids_defined():
 def test_optimize_with_synthetic_data():
     """optimize_strategy returns sorted results."""
     from meta_strategy.backtest import optimize_strategy
+
     # Patch fetch_data to avoid network calls
     data = _make_ohlcv([100 + i * 0.5 for i in range(200)])
     import meta_strategy.backtest as bt_mod
+
     original = bt_mod.fetch_data
     bt_mod.fetch_data = lambda *a, **kw: data
     try:
@@ -283,6 +299,7 @@ def test_walk_forward_with_synthetic_data():
     """walk_forward returns fold results (sequential mode, default)."""
     data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
     import meta_strategy.backtest as bt_mod
+
     original = bt_mod.fetch_data
     bt_mod.fetch_data = lambda *a, **kw: data
     try:
@@ -304,6 +321,7 @@ def test_walk_forward_rolling_mode():
     """walk_forward rolling mode produces overlapping folds with fixed train size."""
     data = _make_ohlcv([100 + i * 0.3 for i in range(800)])
     import meta_strategy.backtest as bt_mod
+
     original = bt_mod.fetch_data
     bt_mod.fetch_data = lambda *a, **kw: data
     try:
@@ -329,6 +347,7 @@ def test_walk_forward_expanding_mode():
     """walk_forward expanding mode produces folds with growing train set."""
     data = _make_ohlcv([100 + i * 0.3 for i in range(800)])
     import meta_strategy.backtest as bt_mod
+
     original = bt_mod.fetch_data
     bt_mod.fetch_data = lambda *a, **kw: data
     try:
@@ -348,14 +367,17 @@ def test_walk_forward_invalid_mode_raises():
     """walk_forward raises ValueError for invalid mode."""
     with pytest.raises(ValueError, match="mode must be"):
         import meta_strategy.backtest as bt_mod
+
         bt_mod.walk_forward("bollinger-bands", mode="invalid")
 
 
 def test_optimize_split_default_70_30():
     """optimize_strategy with default split=0.7 returns IS and OOS metrics."""
     from meta_strategy.backtest import optimize_strategy
+
     data = _make_ohlcv([100 + i * 0.5 for i in range(300)])
     import meta_strategy.backtest as bt_mod
+
     original = bt_mod.fetch_data
     bt_mod.fetch_data = lambda *a, **kw: data
     try:
@@ -380,8 +402,10 @@ def test_optimize_split_default_70_30():
 def test_optimize_split_custom_80_20():
     """optimize_strategy with split=0.8 uses custom ratio."""
     from meta_strategy.backtest import optimize_strategy
+
     data = _make_ohlcv([100 + i * 0.5 for i in range(300)])
     import meta_strategy.backtest as bt_mod
+
     original = bt_mod.fetch_data
     bt_mod.fetch_data = lambda *a, **kw: data
     try:
@@ -400,8 +424,10 @@ def test_optimize_split_custom_80_20():
 def test_optimize_split_1_preserves_legacy():
     """optimize_strategy with split=1.0 gives legacy behavior (no IS/OOS split)."""
     from meta_strategy.backtest import optimize_strategy
+
     data = _make_ohlcv([100 + i * 0.5 for i in range(200)])
     import meta_strategy.backtest as bt_mod
+
     original = bt_mod.fetch_data
     bt_mod.fetch_data = lambda *a, **kw: data
     try:
@@ -422,6 +448,7 @@ def test_optimize_split_1_preserves_legacy():
 def test_optimize_invalid_split_raises():
     """optimize_strategy raises ValueError for invalid split values."""
     from meta_strategy.backtest import optimize_strategy
+
     with pytest.raises(ValueError, match="split must be"):
         optimize_strategy("bollinger-bands", split=0.0)
     with pytest.raises(ValueError, match="split must be"):
@@ -431,6 +458,7 @@ def test_optimize_invalid_split_raises():
 def test_check_overfitting_warns_on_high_ratio():
     """check_overfitting returns warning when IS Sharpe > 2× OOS Sharpe."""
     from meta_strategy.backtest import check_overfitting
+
     result = {"is_sharpe_ratio": 3.0, "sharpe_ratio": 1.0, "params": {}}
     warning = check_overfitting(result)
     assert warning is not None
@@ -442,6 +470,7 @@ def test_check_overfitting_warns_on_high_ratio():
 def test_check_overfitting_no_warning_when_reasonable():
     """check_overfitting returns None when ratio is acceptable."""
     from meta_strategy.backtest import check_overfitting
+
     result = {"is_sharpe_ratio": 1.5, "sharpe_ratio": 1.0, "params": {}}
     assert check_overfitting(result) is None
 
@@ -449,6 +478,7 @@ def test_check_overfitting_no_warning_when_reasonable():
 def test_check_overfitting_skips_without_split():
     """check_overfitting returns None when no IS metrics (split=1.0)."""
     from meta_strategy.backtest import check_overfitting
+
     result = {"sharpe_ratio": 1.5, "params": {}}
     assert check_overfitting(result) is None
 
@@ -456,6 +486,7 @@ def test_check_overfitting_skips_without_split():
 def test_check_overfitting_warns_on_negative_oos():
     """check_overfitting warns when OOS is negative but IS is positive."""
     from meta_strategy.backtest import check_overfitting
+
     result = {"is_sharpe_ratio": 2.0, "sharpe_ratio": -0.5, "params": {}}
     warning = check_overfitting(result)
     assert warning is not None
@@ -465,6 +496,7 @@ def test_check_overfitting_warns_on_negative_oos():
 def test_param_stability_report_stable():
     """param_stability_report returns stable when params are consistent."""
     from meta_strategy.backtest import param_stability_report
+
     folds = [
         {"best_params": {"length": 20, "mult": 2.0}},
         {"best_params": {"length": 20, "mult": 2.0}},
@@ -479,6 +511,7 @@ def test_param_stability_report_stable():
 def test_param_stability_report_unstable():
     """param_stability_report flags >50% parameter changes."""
     from meta_strategy.backtest import param_stability_report
+
     folds = [
         {"best_params": {"length": 10, "mult": 2.0}},
         {"best_params": {"length": 30, "mult": 2.0}},
@@ -493,6 +526,7 @@ def test_param_stability_report_unstable():
 def test_param_stability_report_single_fold():
     """param_stability_report returns stable for single fold."""
     from meta_strategy.backtest import param_stability_report
+
     folds = [{"best_params": {"length": 20}}]
     report = param_stability_report(folds)
     assert report["stable"] is True
@@ -503,6 +537,7 @@ def test_walk_forward_includes_param_stability():
     """walk_forward result includes param_stability key."""
     data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
     import meta_strategy.backtest as bt_mod
+
     original = bt_mod.fetch_data
     bt_mod.fetch_data = lambda *a, **kw: data
     try:

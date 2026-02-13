@@ -1,6 +1,5 @@
 """Tests for StrategyDefinition model."""
 
-
 import pytest
 import yaml
 

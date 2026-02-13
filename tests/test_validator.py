@@ -47,7 +47,7 @@ def test_strategy_name_with_prefix_is_clean():
 
 def test_detect_invalid_commission_variable():
     """CRITICAL: strategy.commission.percent as standalone variable doesn't exist."""
-    code = 'comm = strategy.commission.percent\n'
+    code = "comm = strategy.commission.percent\n"
     warnings = validate_pine_script(code)
     assert any(w.rule == "invalid-variable" and w.severity == Severity.CRITICAL for w in warnings)
 
@@ -69,10 +69,10 @@ def test_detect_line_break_in_call():
 def test_clean_script_no_warnings():
     """A well-formed script produces no warnings."""
     code = (
-        '//@version=6\n'
+        "//@version=6\n"
         'strategy("AI - Test", overlay=true, calc_on_every_tick=false, initial_capital=1000)\n'
-        'plot(close)\n'
-        'if close > ta.sma(close, 20)\n'
+        "plot(close)\n"
+        "if close > ta.sma(close, 20)\n"
         '    strategy.entry("Long", strategy.long)\n'
     )
     warnings = validate_pine_script(code)
