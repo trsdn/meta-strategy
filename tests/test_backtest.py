@@ -608,3 +608,54 @@ def test_run_backtest_no_effective_start_when_zero_warmup():
         assert "effective_start" not in result
     finally:
         bt_mod.fetch_data = original
+
+
+# === Interval parameter tests ===
+
+
+def test_fetch_data_rejects_invalid_interval():
+    """fetch_data raises ValueError for invalid interval."""
+    from meta_strategy.backtest import fetch_data
+
+    with pytest.raises(ValueError, match="Unsupported interval"):
+        fetch_data("BTC-USD", "2020-01-01", interval="3h")
+
+
+def test_run_backtest_passes_interval():
+    """run_backtest passes interval to fetch_data."""
+    import meta_strategy.backtest as bt_mod
+
+    data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
+    captured = {}
+    original = bt_mod.fetch_data
+
+    def mock_fetch(*args, **kwargs):
+        captured.update(kwargs)
+        return data
+
+    bt_mod.fetch_data = mock_fetch
+    try:
+        bt_mod.run_backtest("bollinger-bands", interval="1h")
+        assert captured.get("interval") == "1h"
+    finally:
+        bt_mod.fetch_data = original
+
+
+def test_optimize_passes_interval():
+    """optimize_strategy passes interval to fetch_data."""
+    import meta_strategy.backtest as bt_mod
+
+    data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
+    captured = {}
+    original = bt_mod.fetch_data
+
+    def mock_fetch(*args, **kwargs):
+        captured.update(kwargs)
+        return data
+
+    bt_mod.fetch_data = mock_fetch
+    try:
+        bt_mod.optimize_strategy("bollinger-bands", interval="4h")
+        assert captured.get("interval") == "4h"
+    finally:
+        bt_mod.fetch_data = original
