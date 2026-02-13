@@ -299,3 +299,80 @@ def test_walk_forward_with_synthetic_data():
         assert isinstance(result["folds"], list)
     finally:
         bt_mod.fetch_data = original
+
+
+def test_optimize_split_default_70_30():
+    """optimize_strategy with default split=0.7 returns IS and OOS metrics."""
+    from meta_strategy.backtest import optimize_strategy
+    data = _make_ohlcv([100 + i * 0.5 for i in range(300)])
+    import meta_strategy.backtest as bt_mod
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        results = optimize_strategy(
+            "bollinger-bands",
+            param_grid={"length": [10, 20], "mult": [2.0]},
+            split=0.7,
+        )
+        assert len(results) == 2
+        for r in results:
+            assert "is_return_pct" in r, "Missing in-sample return"
+            assert "is_sharpe_ratio" in r, "Missing in-sample Sharpe"
+            assert "return_pct" in r, "Missing OOS return"
+            assert "sharpe_ratio" in r, "Missing OOS Sharpe"
+        # Sorted by OOS Sharpe descending
+        oos_sharpes = [r["sharpe_ratio"] for r in results]
+        assert oos_sharpes == sorted(oos_sharpes, reverse=True)
+    finally:
+        bt_mod.fetch_data = original
+
+
+def test_optimize_split_custom_80_20():
+    """optimize_strategy with split=0.8 uses custom ratio."""
+    from meta_strategy.backtest import optimize_strategy
+    data = _make_ohlcv([100 + i * 0.5 for i in range(300)])
+    import meta_strategy.backtest as bt_mod
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        results = optimize_strategy(
+            "bollinger-bands",
+            param_grid={"length": [20], "mult": [2.0]},
+            split=0.8,
+        )
+        assert len(results) == 1
+        assert "is_sharpe_ratio" in results[0]
+        assert "sharpe_ratio" in results[0]
+    finally:
+        bt_mod.fetch_data = original
+
+
+def test_optimize_split_1_preserves_legacy():
+    """optimize_strategy with split=1.0 gives legacy behavior (no IS/OOS split)."""
+    from meta_strategy.backtest import optimize_strategy
+    data = _make_ohlcv([100 + i * 0.5 for i in range(200)])
+    import meta_strategy.backtest as bt_mod
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        results = optimize_strategy(
+            "bollinger-bands",
+            param_grid={"length": [10, 20], "mult": [2.0]},
+            split=1.0,
+        )
+        assert len(results) == 2
+        for r in results:
+            assert "is_return_pct" not in r, "Legacy mode should not have IS metrics"
+            assert "return_pct" in r
+            assert "sharpe_ratio" in r
+    finally:
+        bt_mod.fetch_data = original
+
+
+def test_optimize_invalid_split_raises():
+    """optimize_strategy raises ValueError for invalid split values."""
+    from meta_strategy.backtest import optimize_strategy
+    with pytest.raises(ValueError, match="split must be"):
+        optimize_strategy("bollinger-bands", split=0.0)
+    with pytest.raises(ValueError, match="split must be"):
+        optimize_strategy("bollinger-bands", split=1.5)

@@ -239,8 +239,9 @@ def optimize(
     start: str = typer.Option("2018-01-01", help="Start date"),
     top: int = typer.Option(10, help="Show top N results"),
     cash: float = typer.Option(100_000.0, help="Initial capital"),
+    split: float = typer.Option(0.7, help="Train/test split ratio (0.7 = 70%% train). Use 1.0 for no split."),
 ) -> None:
-    """Grid search parameter optimization."""
+    """Grid search parameter optimization with train/test split."""
     from .backtest import optimize_strategy, PARAM_GRIDS
 
     grid = PARAM_GRIDS.get(strategy_name, {})
@@ -248,21 +249,37 @@ def optimize(
     n_combos = 1
     for v in grid.values():
         n_combos *= len(v)
-    typer.echo(f"🔍 Optimizing {strategy_name} on {symbol} ({n_combos} combinations)...\n")
 
-    results = optimize_strategy(strategy_name, symbol=symbol, start=start, cash=cash)
+    has_split = split < 1.0
+    split_label = f", {split:.0%} train" if has_split else ""
+    typer.echo(f"🔍 Optimizing {strategy_name} on {symbol} ({n_combos} combinations{split_label})...\n")
 
-    typer.echo(f"{'Rank':<6} {'Params':<40} {'Return%':>10} {'Sharpe':>8} {'Trades':>8} {'MaxDD%':>10} {'WinRate%':>10}")
-    sep = "-" * 92
-    typer.echo(sep)
-    for i, r in enumerate(results[:top], 1):
-        params_str = ", ".join(f"{k}={v}" for k, v in r["params"].items())
-        typer.echo(f"{i:<6} {params_str:<40} {r['return_pct']:>10.2f} {r['sharpe_ratio']:>8.2f} {r['num_trades']:>8d} {r['max_drawdown_pct']:>10.2f} {r['win_rate_pct']:>10.2f}")
+    results = optimize_strategy(strategy_name, symbol=symbol, start=start, cash=cash, split=split)
+
+    if has_split:
+        header = f"{'Rank':<6} {'Params':<35} {'IS Ret%':>9} {'IS Sharpe':>10} {'OOS Ret%':>9} {'OOS Sharpe':>11} {'Trades':>8} {'MaxDD%':>8} {'WinR%':>8}"
+        sep = "-" * len(header)
+        typer.echo(header)
+        typer.echo(sep)
+        for i, r in enumerate(results[:top], 1):
+            params_str = ", ".join(f"{k}={v}" for k, v in r["params"].items())
+            typer.echo(f"{i:<6} {params_str:<35} {r['is_return_pct']:>9.2f} {r['is_sharpe_ratio']:>10.2f} {r['return_pct']:>9.2f} {r['sharpe_ratio']:>11.2f} {r['num_trades']:>8d} {r['max_drawdown_pct']:>8.2f} {r['win_rate_pct']:>8.2f}")
+    else:
+        header = f"{'Rank':<6} {'Params':<40} {'Return%':>10} {'Sharpe':>8} {'Trades':>8} {'MaxDD%':>10} {'WinRate%':>10}"
+        sep = "-" * 92
+        typer.echo(header)
+        typer.echo(sep)
+        for i, r in enumerate(results[:top], 1):
+            params_str = ", ".join(f"{k}={v}" for k, v in r["params"].items())
+            typer.echo(f"{i:<6} {params_str:<40} {r['return_pct']:>10.2f} {r['sharpe_ratio']:>8.2f} {r['num_trades']:>8d} {r['max_drawdown_pct']:>10.2f} {r['win_rate_pct']:>10.2f}")
     typer.echo(sep)
 
     if results:
         best = results[0]
-        typer.echo(f"\n🏆 Best params: {best['params']} (Sharpe: {best['sharpe_ratio']:.2f}, Return: {best['return_pct']:.2f}%)")
+        if has_split:
+            typer.echo(f"\n🏆 Best params: {best['params']} (OOS Sharpe: {best['sharpe_ratio']:.2f}, IS Sharpe: {best['is_sharpe_ratio']:.2f})")
+        else:
+            typer.echo(f"\n🏆 Best params: {best['params']} (Sharpe: {best['sharpe_ratio']:.2f}, Return: {best['return_pct']:.2f}%)")
 
 
 @app.command(name="walk-forward")

@@ -489,6 +489,17 @@ PARAM_GRIDS: dict[str, dict[str, list]] = {
 }
 
 
+def _extract_metrics(stats) -> dict:
+    """Extract standard metrics from backtesting.py stats Series."""
+    return {
+        "return_pct": round(float(stats["Return [%]"]), 2),
+        "sharpe_ratio": round(float(stats["Sharpe Ratio"]), 2) if not pd.isna(stats["Sharpe Ratio"]) else 0.0,
+        "num_trades": int(stats["# Trades"]),
+        "max_drawdown_pct": round(float(stats["Max. Drawdown [%]"]), 2),
+        "win_rate_pct": round(float(stats["Win Rate [%]"]), 2) if not pd.isna(stats["Win Rate [%]"]) else 0.0,
+    }
+
+
 def optimize_strategy(
     strategy_name: str,
     symbol: str = "BTC-USD",
@@ -497,10 +508,18 @@ def optimize_strategy(
     cash: float = 100_000.0,
     commission: float = 0.001,
     param_grid: dict[str, list] | None = None,
+    split: float = 0.7,
 ) -> list[dict]:
-    """Grid search over parameter combinations. Returns sorted results (best first)."""
+    """Grid search over parameter combinations with optional train/test split.
+
+    Args:
+        split: Fraction of data for training (0.0-1.0). Default 0.7 = 70% train, 30% test.
+               Use 1.0 for legacy behavior (no split).
+    """
     if strategy_name not in STRATEGIES:
         raise ValueError(f"Unknown strategy: {strategy_name}")
+    if not 0.0 < split <= 1.0:
+        raise ValueError(f"split must be in (0, 1.0], got {split}")
 
     grid = param_grid or PARAM_GRIDS.get(strategy_name, {})
     if not grid:
@@ -509,7 +528,15 @@ def optimize_strategy(
     data = fetch_data(symbol, start, end)
     strategy_cls = STRATEGIES[strategy_name]
 
-    # Generate all combinations
+    has_split = split < 1.0
+    if has_split:
+        split_idx = int(len(data) * split)
+        train_data = data.iloc[:split_idx]
+        test_data = data.iloc[split_idx:]
+    else:
+        train_data = data
+        test_data = None
+
     import itertools
     param_names = list(grid.keys())
     param_values = list(grid.values())
@@ -519,20 +546,35 @@ def optimize_strategy(
     for combo in combinations:
         params = dict(zip(param_names, combo))
         try:
-            bt = Backtest(data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
-            stats = bt.run(**params)
-            results.append({
-                "params": params,
-                "return_pct": round(float(stats["Return [%]"]), 2),
-                "sharpe_ratio": round(float(stats["Sharpe Ratio"]), 2) if not pd.isna(stats["Sharpe Ratio"]) else 0.0,
-                "num_trades": int(stats["# Trades"]),
-                "max_drawdown_pct": round(float(stats["Max. Drawdown [%]"]), 2),
-                "win_rate_pct": round(float(stats["Win Rate [%]"]), 2) if not pd.isna(stats["Win Rate [%]"]) else 0.0,
-            })
+            bt_train = Backtest(train_data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
+            train_stats = bt_train.run(**params)
+            entry = {"params": params}
+            train_metrics = _extract_metrics(train_stats)
+
+            if has_split:
+                entry["is_return_pct"] = train_metrics["return_pct"]
+                entry["is_sharpe_ratio"] = train_metrics["sharpe_ratio"]
+                entry["is_num_trades"] = train_metrics["num_trades"]
+                entry["is_max_drawdown_pct"] = train_metrics["max_drawdown_pct"]
+                entry["is_win_rate_pct"] = train_metrics["win_rate_pct"]
+
+                bt_test = Backtest(test_data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
+                test_stats = bt_test.run(**params)
+                oos_metrics = _extract_metrics(test_stats)
+                entry["return_pct"] = oos_metrics["return_pct"]
+                entry["sharpe_ratio"] = oos_metrics["sharpe_ratio"]
+                entry["num_trades"] = oos_metrics["num_trades"]
+                entry["max_drawdown_pct"] = oos_metrics["max_drawdown_pct"]
+                entry["win_rate_pct"] = oos_metrics["win_rate_pct"]
+            else:
+                entry.update(train_metrics)
+
+            results.append(entry)
         except Exception:
             pass
 
-    results.sort(key=lambda r: r["sharpe_ratio"], reverse=True)
+    sort_key = "sharpe_ratio"
+    results.sort(key=lambda r: r[sort_key], reverse=True)
     return results
 
 
