@@ -11,6 +11,7 @@ Track sprint-over-sprint performance to calibrate future sprint sizing.
 | 5 | 2026-02-13 | HTML reports, dashboard, CSV/JSON export | 3 | 3 | 0 | ~0.3 | 10.0 | SVG equity curves, dark theme |
 | 6 | 2026-02-13 | RSI, MACD, confluence strategies | 3 | 3 | 0 | ~0.3 | 10.0 | 6 total strategies now |
 | 7 | 2026-02-13 | CI, Monte Carlo, risk metrics, docs | 4 | 4 | 0 | ~0.3 | 13.3 | Full robustness suite |
+| 8 | 2026-02-13 | Backtesting robustness: fractional, OOS, overfitting | 6 | 6+1 | 0 | ~1.5 | 4.7 | +1 unplanned (CI runner). Session restart mid-sprint. |
 
 ## How to Read This
 
@@ -22,8 +23,7 @@ Track sprint-over-sprint performance to calibrate future sprint sizing.
 
 ## Velocity Trends
 
-> Update this section after accumulating 3+ sprints of data.
-
-- **Average velocity**: TBD issues/hr
-- **Best sprint type**: TBD
-- **Recommended sprint size**: 7 issues (adjust based on data)
+- **Average velocity**: ~9.5 issues/hr across 8 sprints
+- **Best sprint type**: Foundation/setup sprints (12-13 issues/hr)
+- **Slowest sprint**: Sprint 8 (4.7 issues/hr) — session restart, CI runner setup, real debugging (numpy bug)
+- **Recommended sprint size**: 4-6 issues (complex features), 6-8 (routine)
