@@ -1,6 +1,6 @@
 ---
-name: New Custom Agent
-description: Template for creating a new specialized agent definition
+name: new-custom-agent
+description: "Create new custom agent definition. Triggers on: 'create agent', 'new agent'."
 ---
 
 # New Custom Agent

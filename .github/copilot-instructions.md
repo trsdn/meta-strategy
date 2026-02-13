@@ -1,7 +1,7 @@
 # Meta Strategy — Copilot Instructions
 
 > **Cross-references** (read automatically — do NOT duplicate content from these):
-> - `AGENTS.md` — project-specific instructions, available agents and prompts
+> - `AGENTS.md` — project-specific instructions, available agents and skills
 > - `docs/constitution/PROCESS.md` — full development process constitution (stakeholder model, ceremonies, DoD, ICE scoring, label flow, documentation artifacts)
 > - `docs/constitution/PHILOSOPHY.md` — values and principles
 

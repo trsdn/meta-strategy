@@ -1,6 +1,6 @@
 ---
 name: issue-triage
-description: "Triage open GitHub issues — identify items needing milestones, labels, or investigation"
+description: "Triage and organize GitHub issues. Triggers on: 'triage', 'triage issues', 'organize backlog'."
 ---
 
 # Issue Triage

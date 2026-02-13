@@ -1,6 +1,6 @@
 ---
-name: Backlog Refinement
-description: "Turn ideas into concrete, acceptance-criteria-ready backlog issues"
+name: refine
+description: "Turn type:idea issues into concrete backlog issues with acceptance criteria. Triggers on: 'refine', 'refinement', 'process ideas', 'backlog refinement'."
 ---
 
 # Backlog Refinement

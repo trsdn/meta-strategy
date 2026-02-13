@@ -1,6 +1,6 @@
 ---
-name: Sprint Start
-description: Start sprint execution with quality gates and daily huddles
+name: sprint-start
+description: "Start sprint execution with quality gates and daily huddles. Triggers on: 'sprint start', 'start sprint', 'begin sprint', 'let's go'."
 ---
 
 # Sprint Start

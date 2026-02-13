@@ -1,6 +1,6 @@
 ---
 name: direction-gate
-description: "Structured review before strategic direction changes — prevents costly pivots without proper analysis"
+description: "Evaluate strategic direction changes before execution. Triggers on: 'direction change', 'strategic decision', 'pivot'."
 ---
 
 # Direction Gate

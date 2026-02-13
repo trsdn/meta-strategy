@@ -92,12 +92,12 @@ See `docs/architecture/ADR.md` for immutable architectural decisions.
 | Release Agent | `@release-agent` | Versioning, changelogs, release readiness |
 | Challenger | `@challenger` | Adversarial review of decisions and sprints |
 | CI Fixer | `@ci-fixer` | Diagnose and fix CI/CD failures |
-| Copilot Customization Builder | `@copilot-customization-builder` | Create agents, prompts, instructions |
+| Copilot Customization Builder | `@copilot-customization-builder` | Create agents, skills, instructions |
 
-## Available Prompts
+## Available Skills
 
-| Prompt | Use For |
-|--------|---------|
+| Skill | Use For |
+|-------|---------|
 | `sprint-planning` | Triage backlog, score ICE, select sprint scope |
 | `sprint-start` | Begin sprint execution with quality gates |
 | `sprint-review` | Demo deliverables, metrics, acceptance |
@@ -113,7 +113,7 @@ See `docs/architecture/ADR.md` for immutable architectural decisions.
 | `direction-gate` | Structured review before strategic pivots |
 | `issue-triage` | Triage issues needing attention |
 | `new-custom-agent` | Template for creating a new agent |
-| `new-prompt-file` | Template for creating a new prompt |
+| `new-prompt-file` | Template for creating a new skill |
 | `new-instructions-file` | Template for creating instructions file |
 | `subagent-dispatch` | Execute plans with independent subagents |
 | `web-research` | Structured web research with citations |

@@ -1,6 +1,6 @@
 ---
-name: Orchestrate Bugfix
-description: Full pipeline from reproduction test through fix, verification, and review
+name: orchestrate-bugfix
+description: "Full bugfix pipeline: repro test → fix → verify → review. Triggers on: 'orchestrate bugfix', 'fix bug pipeline'."
 ---
 
 # Orchestrate Bugfix

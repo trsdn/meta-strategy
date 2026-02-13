@@ -1,6 +1,6 @@
 ---
-name: Code Review
-description: Structured code review with security, performance, and quality checklists
+name: code-review
+description: "Perform structured code reviews. Triggers on: 'code review', 'review code', 'review PR'."
 ---
 
 # Code Review

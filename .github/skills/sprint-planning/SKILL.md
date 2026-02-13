@@ -1,6 +1,6 @@
 ---
-name: Sprint Planning
-description: Triage backlog, score issues, select sprint scope, move to Planned
+name: sprint-planning
+description: "Triage backlog, score issues, select sprint scope. Triggers on: 'sprint planning', 'plan sprint', 'planning start'."
 ---
 
 # Sprint Planning

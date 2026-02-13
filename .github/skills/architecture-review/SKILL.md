@@ -1,6 +1,6 @@
 ---
-name: Architecture Review
-description: Evaluate a proposed change for ADR compliance and architectural fitness
+name: architecture-review
+description: "Evaluate architectural decisions, propose ADRs. Triggers on: 'architecture review', 'ADR', 'design review'."
 ---
 
 # Architecture Review

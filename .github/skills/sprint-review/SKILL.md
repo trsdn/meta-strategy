@@ -1,6 +1,6 @@
 ---
-name: Sprint Review
-description: Review sprint deliverables, metrics, and autonomous acceptance
+name: sprint-review
+description: "Review sprint deliverables, metrics, demo results. Triggers on: 'sprint review', 'review sprint', 'show results', 'demo'."
 ---
 
 # Sprint Review

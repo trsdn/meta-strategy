@@ -1,6 +1,6 @@
 ---
 name: web-research
-description: "Conduct structured web research with citations and synthesis"
+description: "Structured web research approach. Triggers on: 'research', 'web research', 'look up'."
 ---
 
 # Web Research

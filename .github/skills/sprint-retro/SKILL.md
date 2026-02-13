@@ -1,6 +1,6 @@
 ---
-name: Sprint Retro
-description: Sprint retrospective with process improvements and velocity tracking
+name: sprint-retro
+description: "Sprint retrospective: what went well/badly, process improvements. Triggers on: 'sprint retro', 'retrospective', 'retro', 'what went well'."
 ---
 
 # Sprint Retrospective
@@ -82,7 +82,7 @@ Review questions:
 
 **Actions**:
 - Update agent files in `.github/agents/` if prompts need improvement
-- Update prompt files in `.github/prompts/` if workflows changed
+- Update skill files in `.github/skills/` if workflows changed
 - Update `.github/copilot-instructions.md` if dispatch rules changed
 - Create GitHub issues for tooling improvements that need code changes
 

@@ -1,6 +1,6 @@
 ---
-name: TDD Workflow
-description: Test-Driven Development with Red-Green-Refactor cycle
+name: tdd-workflow
+description: "Test-Driven Development workflow. Triggers on: 'TDD', 'test first', 'write tests'."
 ---
 
 # TDD Workflow

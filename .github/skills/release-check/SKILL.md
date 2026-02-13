@@ -1,6 +1,6 @@
 ---
-name: Release Check
-description: Assess release readiness — version, changelog, tests, CI status
+name: release-check
+description: "Assess release readiness. Triggers on: 'release check', 'ready to release', 'release readiness'."
 ---
 
 # Release Check

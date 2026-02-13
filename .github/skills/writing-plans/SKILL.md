@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: "Create comprehensive implementation plans with bite-sized TDD tasks before touching code"
+description: "Write implementation plans before coding. Triggers on: 'write plan', 'implementation plan', 'plan this'."
 ---
 
 # Writing Plans

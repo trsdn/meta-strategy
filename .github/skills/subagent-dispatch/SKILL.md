@@ -1,6 +1,6 @@
 ---
 name: subagent-dispatch
-description: "Execute implementation plans by dispatching independent subagents per task with two-stage review"
+description: "Dispatch subagents for parallel work. Triggers on: 'dispatch subagents', 'use subagents', 'parallel execution'."
 ---
 
 # Subagent Dispatch
