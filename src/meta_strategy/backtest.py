@@ -8,8 +8,48 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from backtesting import Backtest, Strategy
-from backtesting.lib import crossover
+from backtesting import Strategy
+from backtesting.lib import (
+    FractionalBacktest as _FractionalBacktest,
+)
+from backtesting.lib import (
+    crossover,
+)
+
+
+class Backtest(_FractionalBacktest):
+    """FractionalBacktest with numpy read-only array workaround."""
+
+    def run(self, **kwargs) -> pd.Series:
+        # Workaround: FractionalBacktest.run() does `indicator /= unit` which
+        # fails on read-only numpy arrays. We make them writable first.
+        from contextlib import contextmanager
+
+        original_run = _FractionalBacktest.__bases__[0].run  # Backtest.run
+
+        @contextmanager
+        def _patch(obj, attr, val):
+            orig = getattr(obj, attr)
+            setattr(obj, attr, val)
+            try:
+                yield
+            finally:
+                setattr(obj, attr, orig)
+
+        with _patch(self, '_data', self._FractionalBacktest__data):
+            result = original_run(self, **kwargs)
+
+        trades = result['_trades']
+        trades['Size'] *= self._fractional_unit
+        trades[['EntryPrice', 'ExitPrice', 'TP', 'SL']] /= self._fractional_unit
+
+        indicators = result['_strategy']._indicators
+        for indicator in indicators:
+            if indicator._opts['overlay']:
+                indicator.setflags(write=True)
+                indicator /= self._fractional_unit
+
+        return result
 
 
 # === Indicator functions (used by backtesting.py's self.I()) ===
