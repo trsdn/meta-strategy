@@ -14,3 +14,13 @@
 **Plan check**: No changes needed. CI has pre-existing config issue (externally managed Python) — not related to our changes.
 
 **Next up**: #34 — Train/test split for optimize command
+
+### Huddle — After Issue #34
+
+**Completed**: #34 — Train/test split for optimize added, IS/OOS metrics, --split CLI param (PR #37)
+**Sprint progress**: 2/6 issues done
+**Key learning**: _extract_metrics() helper reduces duplication; #35 dependency unblocked
+
+**Plan check**: No changes. Moving to #31 (rolling window) next — unblocks #32 (expanding window).
+
+**Next up**: #31 — Rolling window walk-forward

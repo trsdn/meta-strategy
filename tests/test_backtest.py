@@ -281,7 +281,7 @@ def test_optimize_with_synthetic_data():
 
 
 def test_walk_forward_with_synthetic_data():
-    """walk_forward returns fold results."""
+    """walk_forward returns fold results (sequential mode, default)."""
     data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
     import meta_strategy.backtest as bt_mod
     original = bt_mod.fetch_data
@@ -293,12 +293,63 @@ def test_walk_forward_with_synthetic_data():
             train_pct=0.7,
         )
         assert result["strategy"] == "bollinger-bands"
-        assert result["n_splits"] == 3
+        assert result["mode"] == "sequential"
         assert "avg_test_return_pct" in result
         assert "avg_test_sharpe" in result
         assert isinstance(result["folds"], list)
     finally:
         bt_mod.fetch_data = original
+
+
+def test_walk_forward_rolling_mode():
+    """walk_forward rolling mode produces overlapping folds with fixed train size."""
+    data = _make_ohlcv([100 + i * 0.3 for i in range(800)])
+    import meta_strategy.backtest as bt_mod
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        result = bt_mod.walk_forward(
+            "bollinger-bands",
+            mode="rolling",
+            train_bars=200,
+            step=100,
+        )
+        assert result["mode"] == "rolling"
+        assert result["train_bars"] == 200
+        assert result["step"] == 100
+        assert len(result["folds"]) >= 2, "Should produce multiple folds"
+        for f in result["folds"]:
+            assert "best_params" in f
+            assert "test_return_pct" in f
+            assert "test_sharpe" in f
+    finally:
+        bt_mod.fetch_data = original
+
+
+def test_walk_forward_expanding_mode():
+    """walk_forward expanding mode produces folds with growing train set."""
+    data = _make_ohlcv([100 + i * 0.3 for i in range(800)])
+    import meta_strategy.backtest as bt_mod
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        result = bt_mod.walk_forward(
+            "bollinger-bands",
+            mode="expanding",
+            train_bars=200,
+            step=100,
+        )
+        assert result["mode"] == "expanding"
+        assert len(result["folds"]) >= 2
+    finally:
+        bt_mod.fetch_data = original
+
+
+def test_walk_forward_invalid_mode_raises():
+    """walk_forward raises ValueError for invalid mode."""
+    with pytest.raises(ValueError, match="mode must be"):
+        import meta_strategy.backtest as bt_mod
+        bt_mod.walk_forward("bollinger-bands", mode="invalid")
 
 
 def test_optimize_split_default_70_30():

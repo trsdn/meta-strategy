@@ -580,6 +580,98 @@ def optimize_strategy(
 
 # === Walk-forward analysis (#15) ===
 
+def _optimize_on_data(train_data, strategy_cls, grid, cash, commission):
+    """Find best params by grid search on training data. Returns (best_params, best_sharpe)."""
+    best_params = {}
+    best_sharpe = -999.0
+    if grid:
+        import itertools
+        param_names = list(grid.keys())
+        for combo in itertools.product(*grid.values()):
+            params = dict(zip(param_names, combo))
+            try:
+                bt = Backtest(train_data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
+                stats = bt.run(**params)
+                sharpe = float(stats["Sharpe Ratio"]) if not pd.isna(stats["Sharpe Ratio"]) else -999.0
+                if sharpe > best_sharpe:
+                    best_sharpe = sharpe
+                    best_params = params
+            except Exception:
+                pass
+    return best_params, best_sharpe
+
+
+def _evaluate_fold(train_data, test_data, strategy_cls, grid, cash, commission, fold_num):
+    """Optimize on train, evaluate on test. Returns fold dict or None."""
+    best_params, best_sharpe = _optimize_on_data(train_data, strategy_cls, grid, cash, commission)
+    try:
+        bt = Backtest(test_data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
+        test_stats = bt.run(**best_params)
+        return {
+            "fold": fold_num,
+            "train_period": f"{train_data.index[0].strftime('%Y-%m-%d')} → {train_data.index[-1].strftime('%Y-%m-%d')}",
+            "test_period": f"{test_data.index[0].strftime('%Y-%m-%d')} → {test_data.index[-1].strftime('%Y-%m-%d')}",
+            "best_params": best_params,
+            "train_sharpe": round(best_sharpe, 2) if best_sharpe > -999 else 0.0,
+            "test_return_pct": round(float(test_stats["Return [%]"]), 2),
+            "test_sharpe": round(float(test_stats["Sharpe Ratio"]), 2) if not pd.isna(test_stats["Sharpe Ratio"]) else 0.0,
+            "test_trades": int(test_stats["# Trades"]),
+            "test_max_dd_pct": round(float(test_stats["Max. Drawdown [%]"]), 2),
+        }
+    except Exception:
+        return None
+
+
+def _sequential_folds(data, n_splits, train_pct):
+    """Generate (train_data, test_data, fold_num) for sequential non-overlapping windows."""
+    n = len(data)
+    window_size = n // n_splits
+    for i in range(n_splits):
+        fold_start = i * window_size
+        fold_end = min((i + 1) * window_size, n)
+        fold_data = data.iloc[fold_start:fold_end]
+        if len(fold_data) < 50:
+            continue
+        train_end = int(len(fold_data) * train_pct)
+        train_data = fold_data.iloc[:train_end]
+        test_data = fold_data.iloc[train_end:]
+        if len(train_data) < 30 or len(test_data) < 10:
+            continue
+        yield train_data, test_data, i + 1
+
+
+def _rolling_folds(data, train_bars, step):
+    """Generate (train_data, test_data, fold_num) for rolling fixed-size window."""
+    n = len(data)
+    fold_num = 0
+    i = 0
+    while i + train_bars + step <= n:
+        fold_num += 1
+        train_data = data.iloc[i:i + train_bars]
+        test_data = data.iloc[i + train_bars:i + train_bars + step]
+        if len(train_data) < 30 or len(test_data) < 10:
+            i += step
+            continue
+        yield train_data, test_data, fold_num
+        i += step
+
+
+def _expanding_folds(data, train_bars, step):
+    """Generate (train_data, test_data, fold_num) for expanding window (train grows from start)."""
+    n = len(data)
+    fold_num = 0
+    train_end = train_bars
+    while train_end + step <= n:
+        fold_num += 1
+        train_data = data.iloc[:train_end]
+        test_data = data.iloc[train_end:train_end + step]
+        if len(train_data) < 30 or len(test_data) < 10:
+            train_end += step
+            continue
+        yield train_data, test_data, fold_num
+        train_end += step
+
+
 def walk_forward(
     strategy_name: str,
     symbol: str = "BTC-USD",
@@ -589,72 +681,47 @@ def walk_forward(
     commission: float = 0.001,
     n_splits: int = 5,
     train_pct: float = 0.7,
+    mode: str = "sequential",
+    train_bars: int | None = None,
+    step: int | None = None,
 ) -> dict:
-    """Walk-forward analysis: optimize on train window, test on out-of-sample window.
+    """Walk-forward analysis with multiple windowing modes.
 
-    Splits data into n_splits sequential windows. For each window, optimizes parameters
-    on the training portion and evaluates on the test portion.
+    Modes:
+        sequential: Split into n_splits non-overlapping chunks (original behavior).
+        rolling: Fixed-size train window slides forward by step bars.
+        expanding: Train grows from start, test is next step bars.
+
+    Args:
+        mode: 'sequential', 'rolling', or 'expanding'.
+        train_bars: Training window size in bars (rolling/expanding modes).
+        step: Step size in bars for sliding the window (rolling/expanding modes).
     """
     if strategy_name not in STRATEGIES:
         raise ValueError(f"Unknown strategy: {strategy_name}")
+    if mode not in ("sequential", "rolling", "expanding"):
+        raise ValueError(f"mode must be 'sequential', 'rolling', or 'expanding', got '{mode}'")
 
     data = fetch_data(symbol, start, end)
-    n = len(data)
-    window_size = n // n_splits
     strategy_cls = STRATEGIES[strategy_name]
     grid = PARAM_GRIDS.get(strategy_name, {})
 
+    if mode == "sequential":
+        fold_gen = _sequential_folds(data, n_splits, train_pct)
+    elif mode == "rolling":
+        tb = train_bars or 500
+        st = step or 100
+        fold_gen = _rolling_folds(data, tb, st)
+    else:  # expanding
+        tb = train_bars or 500
+        st = step or 100
+        fold_gen = _expanding_folds(data, tb, st)
+
     folds = []
-    for i in range(n_splits):
-        fold_start = i * window_size
-        fold_end = min((i + 1) * window_size, n)
-        fold_data = data.iloc[fold_start:fold_end]
-
-        if len(fold_data) < 50:
-            continue
-
-        train_end = int(len(fold_data) * train_pct)
-        train_data = fold_data.iloc[:train_end]
-        test_data = fold_data.iloc[train_end:]
-
-        if len(train_data) < 30 or len(test_data) < 10:
-            continue
-
-        # Optimize on train data
-        best_params = {}
-        best_sharpe = -999.0
-        if grid:
-            import itertools
-            param_names = list(grid.keys())
-            for combo in itertools.product(*grid.values()):
-                params = dict(zip(param_names, combo))
-                try:
-                    bt = Backtest(train_data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
-                    stats = bt.run(**params)
-                    sharpe = float(stats["Sharpe Ratio"]) if not pd.isna(stats["Sharpe Ratio"]) else -999.0
-                    if sharpe > best_sharpe:
-                        best_sharpe = sharpe
-                        best_params = params
-                except Exception:
-                    pass
-
-        # Test on out-of-sample data
-        try:
-            bt = Backtest(test_data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
-            test_stats = bt.run(**best_params)
-            folds.append({
-                "fold": i + 1,
-                "train_period": f"{train_data.index[0].strftime('%Y-%m-%d')} → {train_data.index[-1].strftime('%Y-%m-%d')}",
-                "test_period": f"{test_data.index[0].strftime('%Y-%m-%d')} → {test_data.index[-1].strftime('%Y-%m-%d')}",
-                "best_params": best_params,
-                "train_sharpe": round(best_sharpe, 2) if best_sharpe > -999 else 0.0,
-                "test_return_pct": round(float(test_stats["Return [%]"]), 2),
-                "test_sharpe": round(float(test_stats["Sharpe Ratio"]), 2) if not pd.isna(test_stats["Sharpe Ratio"]) else 0.0,
-                "test_trades": int(test_stats["# Trades"]),
-                "test_max_dd_pct": round(float(test_stats["Max. Drawdown [%]"]), 2),
-            })
-        except Exception:
-            pass
+    for train_data, test_data, fold_num in fold_gen:
+        result = _evaluate_fold(train_data, test_data, strategy_cls, grid, cash, commission, fold_num)
+        if result:
+            folds.append(result)
 
     avg_test_return = np.mean([f["test_return_pct"] for f in folds]) if folds else 0.0
     avg_test_sharpe = np.mean([f["test_sharpe"] for f in folds]) if folds else 0.0
@@ -662,8 +729,11 @@ def walk_forward(
     return {
         "strategy": strategy_name,
         "symbol": symbol,
-        "n_splits": n_splits,
-        "train_pct": train_pct,
+        "mode": mode,
+        "n_splits": n_splits if mode == "sequential" else len(folds),
+        "train_pct": train_pct if mode == "sequential" else None,
+        "train_bars": train_bars if mode != "sequential" else None,
+        "step": step if mode != "sequential" else None,
         "folds": folds,
         "avg_test_return_pct": round(float(avg_test_return), 2),
         "avg_test_sharpe": round(float(avg_test_sharpe), 2),

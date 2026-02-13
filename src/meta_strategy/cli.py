@@ -287,16 +287,28 @@ def walk_forward_cmd(
     strategy_name: str = typer.Argument(..., help="Strategy name"),
     symbol: str = typer.Option("BTC-USD", help="Asset symbol"),
     start: str = typer.Option("2018-01-01", help="Start date"),
-    splits: int = typer.Option(5, help="Number of walk-forward splits"),
-    train_pct: float = typer.Option(0.7, help="Training set percentage"),
+    splits: int = typer.Option(5, help="Number of walk-forward splits (sequential mode)"),
+    train_pct: float = typer.Option(0.7, help="Training set percentage (sequential mode)"),
     cash: float = typer.Option(100_000.0, help="Initial capital"),
+    mode: str = typer.Option("sequential", help="Windowing mode: sequential, rolling, or expanding"),
+    train_bars: Optional[int] = typer.Option(None, help="Training window size in bars (rolling/expanding)"),
+    step: Optional[int] = typer.Option(None, help="Step size in bars (rolling/expanding)"),
 ) -> None:
     """Walk-forward analysis with out-of-sample validation."""
     from .backtest import walk_forward
 
-    typer.echo(f"🔄 Walk-forward analysis: {strategy_name} on {symbol} ({splits} folds, {train_pct:.0%} train)...\n")
+    if mode == "sequential":
+        label = f"{splits} folds, {train_pct:.0%} train"
+    else:
+        tb = train_bars or 500
+        st = step or 100
+        label = f"{mode}, {tb} train bars, {st} step"
+    typer.echo(f"🔄 Walk-forward analysis: {strategy_name} on {symbol} ({label})...\n")
 
-    result = walk_forward(strategy_name, symbol=symbol, start=start, n_splits=splits, train_pct=train_pct, cash=cash)
+    result = walk_forward(
+        strategy_name, symbol=symbol, start=start, n_splits=splits,
+        train_pct=train_pct, cash=cash, mode=mode, train_bars=train_bars, step=step,
+    )
 
     for f in result["folds"]:
         params_str = ", ".join(f"{k}={v}" for k, v in f["best_params"].items()) if f["best_params"] else "default"
