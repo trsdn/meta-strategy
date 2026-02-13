@@ -407,11 +407,12 @@ def run_backtest(
 
     data = fetch_data(symbol, start, end)
     strategy_cls = STRATEGIES[strategy_name]
+    warmup = detect_warmup(strategy_cls, data)
 
     bt = Backtest(data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
     stats = bt.run()
 
-    return {
+    result = {
         "strategy": strategy_name,
         "symbol": symbol,
         "period": f"{start} → {data.index[-1].strftime('%Y-%m-%d')}",
@@ -422,7 +423,11 @@ def run_backtest(
         "max_drawdown_pct": round(float(stats["Max. Drawdown [%]"]), 2),
         "sharpe_ratio": round(float(stats["Sharpe Ratio"]), 2) if not pd.isna(stats["Sharpe Ratio"]) else 0.0,
         "final_equity": round(float(stats["Equity Final [$]"]), 2),
+        "warmup_bars": warmup,
     }
+    if warmup > 0:
+        result["effective_start"] = data.index[warmup].strftime("%Y-%m-%d")
+    return result
 
 
 def detect_warmup(strategy_cls: type[Strategy], data: pd.DataFrame) -> int:

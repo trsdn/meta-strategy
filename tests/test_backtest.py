@@ -577,3 +577,34 @@ def test_run_all_backtests_has_effective_start():
             assert r["warmup_bars_trimmed"] > 0
     finally:
         bt_mod.fetch_data = original
+
+
+def test_run_backtest_includes_warmup_bars():
+    """Individual run_backtest includes warmup_bars field."""
+    import meta_strategy.backtest as bt_mod
+
+    data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        result = bt_mod.run_backtest("bollinger-bands")
+        assert "warmup_bars" in result
+        assert result["warmup_bars"] == 19  # BB uses 20-period rolling
+        assert "effective_start" in result
+    finally:
+        bt_mod.fetch_data = original
+
+
+def test_run_backtest_no_effective_start_when_zero_warmup():
+    """Strategies with 0 warmup bars don't include effective_start."""
+    import meta_strategy.backtest as bt_mod
+
+    data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        result = bt_mod.run_backtest("supertrend")
+        assert result["warmup_bars"] == 0
+        assert "effective_start" not in result
+    finally:
+        bt_mod.fetch_data = original

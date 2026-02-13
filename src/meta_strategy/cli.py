@@ -143,6 +143,8 @@ def backtest(
     typer.echo(f"  Max Drawdown:    {result['max_drawdown_pct']:>10.2f}%")
     typer.echo(f"  Sharpe Ratio:    {result['sharpe_ratio']:>10.2f}")
     typer.echo(f"  Final Equity:    ${result['final_equity']:>10.2f}")
+    if result.get("warmup_bars", 0) > 0:
+        typer.echo(f"  Effective start: {result['effective_start']} ({result['warmup_bars']} warmup bars skipped)")
     typer.echo(f"{'=' * 60}")
 
 
