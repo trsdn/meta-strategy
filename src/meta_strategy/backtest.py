@@ -145,6 +145,37 @@ def weekly_ema(close: pd.Series, length: int = 21) -> pd.Series:
     return close.ewm(span=weekly_length, adjust=False).mean()
 
 
+def rsi(close: pd.Series, length: int = 14) -> pd.Series:
+    """Relative Strength Index."""
+    close = pd.Series(close)
+    delta = close.diff()
+    gain = delta.clip(lower=0)
+    loss = (-delta).clip(lower=0)
+    avg_gain = gain.ewm(alpha=1 / length, min_periods=length, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1 / length, min_periods=length, adjust=False).mean()
+    rs = avg_gain / avg_loss
+    return 100 - (100 / (1 + rs))
+
+
+def macd_line(close: pd.Series, fast: int = 12, slow: int = 26) -> pd.Series:
+    """MACD line (fast EMA - slow EMA)."""
+    close = pd.Series(close)
+    return close.ewm(span=fast, adjust=False).mean() - close.ewm(span=slow, adjust=False).mean()
+
+
+def macd_signal(close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> pd.Series:
+    """MACD signal line."""
+    close = pd.Series(close)
+    ml = close.ewm(span=fast, adjust=False).mean() - close.ewm(span=slow, adjust=False).mean()
+    return ml.ewm(span=signal, adjust=False).mean()
+
+
+def sma(close: pd.Series, length: int = 200) -> pd.Series:
+    """Simple Moving Average."""
+    close = pd.Series(close)
+    return close.rolling(length).mean()
+
+
 # === Strategy classes ===
 
 class BollingerBandsStrategy(Strategy):
@@ -211,6 +242,82 @@ class BullMarketSupportBandStrategy(Strategy):
             self.position.close()
 
 
+class RSIStrategy(Strategy):
+    """RSI overbought/oversold with 200 SMA trend filter.
+
+    Entry: RSI < 30 (oversold) AND close > 200 SMA (uptrend)
+    Exit: RSI > 70 (overbought)
+    """
+    rsi_length = 14
+    overbought = 70
+    oversold = 30
+    sma_length = 200
+
+    def init(self):
+        self.rsi_val = self.I(rsi, self.data.Close, self.rsi_length)
+        self.sma_val = self.I(sma, self.data.Close, self.sma_length)
+
+    def next(self):
+        if not self.position:
+            if self.rsi_val[-1] < self.oversold and self.data.Close[-1] > self.sma_val[-1]:
+                self.buy()
+        elif self.rsi_val[-1] > self.overbought:
+            self.position.close()
+
+
+class MACDStrategy(Strategy):
+    """MACD crossover strategy.
+
+    Entry: MACD line crosses above signal line
+    Exit: MACD line crosses below signal line
+    """
+    fast = 12
+    slow = 26
+    signal_length = 9
+
+    def init(self):
+        self.macd = self.I(macd_line, self.data.Close, self.fast, self.slow)
+        self.signal = self.I(macd_signal, self.data.Close, self.fast, self.slow, self.signal_length)
+
+    def next(self):
+        if not self.position:
+            if crossover(self.macd, self.signal):
+                self.buy()
+        elif crossover(self.signal, self.macd):
+            self.position.close()
+
+
+class ConfluenceStrategy(Strategy):
+    """Multi-indicator confluence strategy.
+
+    Combines BB, RSI, and MACD for higher-confidence signals.
+    Entry: Close > BB upper AND RSI < 70 AND MACD > Signal (momentum + breakout + not overbought)
+    Exit: Close < BB lower OR RSI > 80
+    """
+    bb_length = 20
+    bb_mult = 2.0
+    rsi_length = 14
+    macd_fast = 12
+    macd_slow = 26
+    macd_signal_len = 9
+
+    def init(self):
+        self.bb_upper = self.I(bollinger_upper, self.data.Close, self.bb_length, self.bb_mult)
+        self.bb_lower = self.I(bollinger_lower, self.data.Close, self.bb_length, self.bb_mult)
+        self.rsi_val = self.I(rsi, self.data.Close, self.rsi_length)
+        self.macd_val = self.I(macd_line, self.data.Close, self.macd_fast, self.macd_slow)
+        self.macd_sig = self.I(macd_signal, self.data.Close, self.macd_fast, self.macd_slow, self.macd_signal_len)
+
+    def next(self):
+        if not self.position:
+            if (self.data.Close[-1] > self.bb_upper[-1]
+                    and self.rsi_val[-1] < 70
+                    and self.macd_val[-1] > self.macd_sig[-1]):
+                self.buy()
+        elif self.data.Close[-1] < self.bb_lower[-1] or self.rsi_val[-1] > 80:
+            self.position.close()
+
+
 # === Data fetching ===
 
 def fetch_data(symbol: str = "BTC-USD", start: str = "2018-01-01", end: str | None = None) -> pd.DataFrame:
@@ -230,6 +337,9 @@ STRATEGIES = {
     "bollinger-bands": BollingerBandsStrategy,
     "supertrend": SuperTrendStrategy,
     "bull-market-support-band": BullMarketSupportBandStrategy,
+    "rsi": RSIStrategy,
+    "macd": MACDStrategy,
+    "confluence": ConfluenceStrategy,
 }
 
 
@@ -323,6 +433,18 @@ PARAM_GRIDS: dict[str, dict[str, list]] = {
     "bull-market-support-band": {
         "sma_length": [15, 20, 25],
         "ema_length": [18, 21, 25],
+    },
+    "rsi": {
+        "rsi_length": [7, 14, 21],
+        "oversold": [20, 30, 40],
+    },
+    "macd": {
+        "fast": [8, 12, 16],
+        "slow": [21, 26, 30],
+    },
+    "confluence": {
+        "bb_length": [15, 20, 25],
+        "rsi_length": [10, 14, 21],
     },
 }
 

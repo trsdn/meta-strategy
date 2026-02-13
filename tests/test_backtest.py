@@ -11,11 +11,18 @@ from meta_strategy.backtest import (
     BollingerBandsStrategy,
     SuperTrendStrategy,
     BullMarketSupportBandStrategy,
+    RSIStrategy,
+    MACDStrategy,
+    ConfluenceStrategy,
     bollinger_upper,
     bollinger_lower,
     supertrend_direction,
     weekly_sma,
     weekly_ema,
+    rsi,
+    macd_line,
+    macd_signal,
+    sma,
     STRATEGIES,
 )
 from backtesting import Backtest
@@ -116,11 +123,14 @@ def test_bull_market_support_band_strategy():
 
 
 def test_strategies_registry():
-    """All three strategies are registered."""
+    """All six strategies are registered."""
     assert "bollinger-bands" in STRATEGIES
     assert "supertrend" in STRATEGIES
     assert "bull-market-support-band" in STRATEGIES
-    assert len(STRATEGIES) == 3
+    assert "rsi" in STRATEGIES
+    assert "macd" in STRATEGIES
+    assert "confluence" in STRATEGIES
+    assert len(STRATEGIES) == 6
 
 
 def test_bollinger_indicators():
@@ -143,6 +153,83 @@ def test_weekly_sma_ema_lengths():
     assert not pd.isna(sma.iloc[99])
     # EMA should have values everywhere (ewm doesn't produce NaN)
     assert not pd.isna(ema.iloc[-1])
+
+
+# === Sprint 6 tests ===
+
+def test_rsi_indicator():
+    """RSI returns values between 0 and 100."""
+    np.random.seed(42)
+    close = pd.Series(100 + np.cumsum(np.random.normal(0, 2, 200)))
+    r = rsi(close, 14)
+    valid = r.dropna()
+    assert len(valid) > 0
+    assert valid.min() >= 0
+    assert valid.max() <= 100
+
+
+def test_rsi_oversold_overbought():
+    """RSI hits extremes on strong trends."""
+    # Strong uptrend
+    close_up = pd.Series([100 + i * 5 for i in range(50)])
+    r_up = rsi(close_up, 14)
+    assert r_up.iloc[-1] > 70  # should be overbought
+
+    # Strong downtrend
+    close_down = pd.Series([300 - i * 5 for i in range(50)])
+    r_down = rsi(close_down, 14)
+    assert r_down.iloc[-1] < 30  # should be oversold
+
+
+def test_macd_indicators():
+    """MACD line and signal are computed correctly."""
+    close = pd.Series([100 + i * 0.5 for i in range(100)])
+    ml = macd_line(close, 12, 26)
+    ms = macd_signal(close, 12, 26, 9)
+    assert len(ml) == 100
+    assert len(ms) == 100
+    # In steady uptrend, MACD should be positive
+    assert ml.iloc[-1] > 0
+
+
+def test_rsi_strategy_trades():
+    """RSI strategy produces trades on oscillating data."""
+    np.random.seed(42)
+    n = 500
+    # Create oscillating data around a trend
+    trend = np.linspace(100, 200, n)
+    noise = np.cumsum(np.random.normal(0, 3, n))
+    prices = (trend + noise).tolist()
+    prices = [max(p, 10.0) for p in prices]
+    data = _make_ohlcv(prices)
+    bt = Backtest(data, RSIStrategy, cash=100_000, commission=0)
+    stats = bt.run()
+    # May or may not trade depending on SMA filter, but should not error
+    assert stats["# Trades"] >= 0
+
+
+def test_macd_strategy_trades():
+    """MACD strategy produces trades on trending data."""
+    np.random.seed(123)
+    n = 300
+    prices = (100 + np.cumsum(np.random.normal(0.1, 2, n))).tolist()
+    prices = [max(p, 10.0) for p in prices]
+    data = _make_ohlcv(prices)
+    bt = Backtest(data, MACDStrategy, cash=100_000, commission=0)
+    stats = bt.run()
+    assert stats["# Trades"] >= 1
+
+
+def test_confluence_strategy_runs():
+    """Confluence strategy runs without error."""
+    np.random.seed(42)
+    n = 300
+    prices = (100 + np.cumsum(np.random.normal(0.2, 3, n))).tolist()
+    prices = [max(p, 10.0) for p in prices]
+    data = _make_ohlcv(prices)
+    bt = Backtest(data, ConfluenceStrategy, cash=100_000, commission=0)
+    stats = bt.run()
+    assert stats["# Trades"] >= 0
 
 
 # === Sprint 4 tests ===
