@@ -93,8 +93,6 @@ def test_fetch_data_invalid_interval() -> None:
 
 def test_fetch_data_empty_dataframe() -> None:
     """fetch_data with mocked empty response returns empty DataFrame."""
-    from meta_strategy.backtest import fetch_data
-
     with patch("meta_strategy.backtest.fetch_data") as mock_fetch:
         mock_fetch.return_value = pd.DataFrame(columns=["Open", "High", "Low", "Close", "Volume"])
         result = mock_fetch("INVALID-SYMBOL-XYZ")
