@@ -272,3 +272,195 @@ def run_all_backtests(symbol: str = "BTC-USD", start: str = "2018-01-01", **kwar
         result = run_backtest(name, symbol=symbol, start=start, **kwargs)
         results.append(result)
     return results
+
+
+# === Multi-asset support (#13) ===
+
+DEFAULT_ASSETS = ["BTC-USD", "ETH-USD", "SPY", "AAPL", "MSFT", "GOOG"]
+
+
+def run_multi_asset(
+    strategy_name: str,
+    symbols: list[str] | None = None,
+    start: str = "2018-01-01",
+    **kwargs,
+) -> list[dict]:
+    """Run a strategy across multiple assets."""
+    symbols = symbols or DEFAULT_ASSETS
+    results = []
+    for sym in symbols:
+        try:
+            result = run_backtest(strategy_name, symbol=sym, start=start, **kwargs)
+            results.append(result)
+        except Exception as e:
+            results.append({
+                "strategy": strategy_name,
+                "symbol": sym,
+                "period": f"{start} → error",
+                "return_pct": 0.0,
+                "buy_hold_return_pct": 0.0,
+                "win_rate_pct": 0.0,
+                "num_trades": 0,
+                "max_drawdown_pct": 0.0,
+                "sharpe_ratio": 0.0,
+                "final_equity": 0.0,
+                "error": str(e),
+            })
+    return results
+
+
+# === Parameter optimization with grid search (#14) ===
+
+PARAM_GRIDS: dict[str, dict[str, list]] = {
+    "bollinger-bands": {
+        "length": [10, 15, 20, 25, 30],
+        "mult": [1.5, 2.0, 2.5, 3.0],
+    },
+    "supertrend": {
+        "period": [7, 10, 14, 20],
+        "factor": [1.5, 2.0, 3.0, 4.0],
+    },
+    "bull-market-support-band": {
+        "sma_length": [15, 20, 25],
+        "ema_length": [18, 21, 25],
+    },
+}
+
+
+def optimize_strategy(
+    strategy_name: str,
+    symbol: str = "BTC-USD",
+    start: str = "2018-01-01",
+    end: str | None = None,
+    cash: float = 100_000.0,
+    commission: float = 0.001,
+    param_grid: dict[str, list] | None = None,
+) -> list[dict]:
+    """Grid search over parameter combinations. Returns sorted results (best first)."""
+    if strategy_name not in STRATEGIES:
+        raise ValueError(f"Unknown strategy: {strategy_name}")
+
+    grid = param_grid or PARAM_GRIDS.get(strategy_name, {})
+    if not grid:
+        raise ValueError(f"No parameter grid defined for {strategy_name}")
+
+    data = fetch_data(symbol, start, end)
+    strategy_cls = STRATEGIES[strategy_name]
+
+    # Generate all combinations
+    import itertools
+    param_names = list(grid.keys())
+    param_values = list(grid.values())
+    combinations = list(itertools.product(*param_values))
+
+    results = []
+    for combo in combinations:
+        params = dict(zip(param_names, combo))
+        try:
+            bt = Backtest(data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
+            stats = bt.run(**params)
+            results.append({
+                "params": params,
+                "return_pct": round(float(stats["Return [%]"]), 2),
+                "sharpe_ratio": round(float(stats["Sharpe Ratio"]), 2) if not pd.isna(stats["Sharpe Ratio"]) else 0.0,
+                "num_trades": int(stats["# Trades"]),
+                "max_drawdown_pct": round(float(stats["Max. Drawdown [%]"]), 2),
+                "win_rate_pct": round(float(stats["Win Rate [%]"]), 2) if not pd.isna(stats["Win Rate [%]"]) else 0.0,
+            })
+        except Exception:
+            pass
+
+    results.sort(key=lambda r: r["sharpe_ratio"], reverse=True)
+    return results
+
+
+# === Walk-forward analysis (#15) ===
+
+def walk_forward(
+    strategy_name: str,
+    symbol: str = "BTC-USD",
+    start: str = "2018-01-01",
+    end: str | None = None,
+    cash: float = 100_000.0,
+    commission: float = 0.001,
+    n_splits: int = 5,
+    train_pct: float = 0.7,
+) -> dict:
+    """Walk-forward analysis: optimize on train window, test on out-of-sample window.
+
+    Splits data into n_splits sequential windows. For each window, optimizes parameters
+    on the training portion and evaluates on the test portion.
+    """
+    if strategy_name not in STRATEGIES:
+        raise ValueError(f"Unknown strategy: {strategy_name}")
+
+    data = fetch_data(symbol, start, end)
+    n = len(data)
+    window_size = n // n_splits
+    strategy_cls = STRATEGIES[strategy_name]
+    grid = PARAM_GRIDS.get(strategy_name, {})
+
+    folds = []
+    for i in range(n_splits):
+        fold_start = i * window_size
+        fold_end = min((i + 1) * window_size, n)
+        fold_data = data.iloc[fold_start:fold_end]
+
+        if len(fold_data) < 50:
+            continue
+
+        train_end = int(len(fold_data) * train_pct)
+        train_data = fold_data.iloc[:train_end]
+        test_data = fold_data.iloc[train_end:]
+
+        if len(train_data) < 30 or len(test_data) < 10:
+            continue
+
+        # Optimize on train data
+        best_params = {}
+        best_sharpe = -999.0
+        if grid:
+            import itertools
+            param_names = list(grid.keys())
+            for combo in itertools.product(*grid.values()):
+                params = dict(zip(param_names, combo))
+                try:
+                    bt = Backtest(train_data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
+                    stats = bt.run(**params)
+                    sharpe = float(stats["Sharpe Ratio"]) if not pd.isna(stats["Sharpe Ratio"]) else -999.0
+                    if sharpe > best_sharpe:
+                        best_sharpe = sharpe
+                        best_params = params
+                except Exception:
+                    pass
+
+        # Test on out-of-sample data
+        try:
+            bt = Backtest(test_data, strategy_cls, cash=cash, commission=commission, exclusive_orders=True)
+            test_stats = bt.run(**best_params)
+            folds.append({
+                "fold": i + 1,
+                "train_period": f"{train_data.index[0].strftime('%Y-%m-%d')} → {train_data.index[-1].strftime('%Y-%m-%d')}",
+                "test_period": f"{test_data.index[0].strftime('%Y-%m-%d')} → {test_data.index[-1].strftime('%Y-%m-%d')}",
+                "best_params": best_params,
+                "train_sharpe": round(best_sharpe, 2) if best_sharpe > -999 else 0.0,
+                "test_return_pct": round(float(test_stats["Return [%]"]), 2),
+                "test_sharpe": round(float(test_stats["Sharpe Ratio"]), 2) if not pd.isna(test_stats["Sharpe Ratio"]) else 0.0,
+                "test_trades": int(test_stats["# Trades"]),
+                "test_max_dd_pct": round(float(test_stats["Max. Drawdown [%]"]), 2),
+            })
+        except Exception:
+            pass
+
+    avg_test_return = np.mean([f["test_return_pct"] for f in folds]) if folds else 0.0
+    avg_test_sharpe = np.mean([f["test_sharpe"] for f in folds]) if folds else 0.0
+
+    return {
+        "strategy": strategy_name,
+        "symbol": symbol,
+        "n_splits": n_splits,
+        "train_pct": train_pct,
+        "folds": folds,
+        "avg_test_return_pct": round(float(avg_test_return), 2),
+        "avg_test_sharpe": round(float(avg_test_sharpe), 2),
+    }

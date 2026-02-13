@@ -143,3 +143,72 @@ def test_weekly_sma_ema_lengths():
     assert not pd.isna(sma.iloc[99])
     # EMA should have values everywhere (ewm doesn't produce NaN)
     assert not pd.isna(ema.iloc[-1])
+
+
+# === Sprint 4 tests ===
+
+def test_multi_asset_returns_results_per_symbol():
+    """run_multi_asset returns one result per symbol."""
+    from meta_strategy.backtest import run_multi_asset, DEFAULT_ASSETS
+    # Just test the function signature / error handling with a bad symbol
+    results = run_multi_asset("bollinger-bands", symbols=["INVALID_SYMBOL_XYZ"])
+    assert len(results) == 1
+    assert "error" in results[0]
+
+
+def test_default_assets_list():
+    """DEFAULT_ASSETS contains expected symbols."""
+    from meta_strategy.backtest import DEFAULT_ASSETS
+    assert "BTC-USD" in DEFAULT_ASSETS
+    assert "SPY" in DEFAULT_ASSETS
+    assert len(DEFAULT_ASSETS) >= 4
+
+
+def test_param_grids_defined():
+    """Parameter grids exist for all strategies."""
+    from meta_strategy.backtest import PARAM_GRIDS, STRATEGIES
+    for name in STRATEGIES:
+        assert name in PARAM_GRIDS, f"Missing param grid for {name}"
+        assert len(PARAM_GRIDS[name]) >= 2, f"Grid for {name} needs at least 2 params"
+
+
+def test_optimize_with_synthetic_data():
+    """optimize_strategy returns sorted results."""
+    from meta_strategy.backtest import optimize_strategy, STRATEGIES, Backtest
+    # Patch fetch_data to avoid network calls
+    data = _make_ohlcv([100 + i * 0.5 for i in range(200)])
+    import meta_strategy.backtest as bt_mod
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        results = optimize_strategy(
+            "bollinger-bands",
+            param_grid={"length": [10, 20], "mult": [1.5, 2.0]},
+        )
+        assert len(results) == 4  # 2 × 2 combinations
+        # Sorted by Sharpe (descending)
+        sharpes = [r["sharpe_ratio"] for r in results]
+        assert sharpes == sorted(sharpes, reverse=True)
+    finally:
+        bt_mod.fetch_data = original
+
+
+def test_walk_forward_with_synthetic_data():
+    """walk_forward returns fold results."""
+    data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
+    import meta_strategy.backtest as bt_mod
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        result = bt_mod.walk_forward(
+            "bollinger-bands",
+            n_splits=3,
+            train_pct=0.7,
+        )
+        assert result["strategy"] == "bollinger-bands"
+        assert result["n_splits"] == 3
+        assert "avg_test_return_pct" in result
+        assert "avg_test_sharpe" in result
+        assert isinstance(result["folds"], list)
+    finally:
+        bt_mod.fetch_data = original

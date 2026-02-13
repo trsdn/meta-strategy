@@ -199,6 +199,98 @@ def _save_results_markdown(results: list[dict], symbol: str) -> None:
     output_path.write_text("\n".join(lines))
 
 
+@app.command(name="multi-asset")
+def multi_asset_cmd(
+    strategy_name: str = typer.Argument(..., help="Strategy name"),
+    symbols: str = typer.Option("BTC-USD,ETH-USD,SPY,AAPL", help="Comma-separated symbols"),
+    start: str = typer.Option("2018-01-01", help="Backtest start date"),
+    cash: float = typer.Option(100_000.0, help="Initial capital"),
+    commission: float = typer.Option(0.001, help="Commission rate"),
+) -> None:
+    """Run a strategy across multiple assets."""
+    from .backtest import run_multi_asset
+
+    symbol_list = [s.strip() for s in symbols.split(",")]
+    typer.echo(f"📊 Running {strategy_name} across {len(symbol_list)} assets...\n")
+
+    results = run_multi_asset(strategy_name, symbols=symbol_list, start=start, cash=cash, commission=commission)
+
+    header = f"{'Symbol':<12} {'Return%':>10} {'B&H%':>10} {'WinRate%':>10} {'Trades':>8} {'MaxDD%':>10} {'Sharpe':>8}"
+    sep = "-" * len(header)
+    typer.echo(header)
+    typer.echo(sep)
+    for r in results:
+        if "error" in r:
+            typer.echo(f"{r['symbol']:<12} {'ERROR':>10}")
+        else:
+            typer.echo(f"{r['symbol']:<12} {r['return_pct']:>10.2f} {r['buy_hold_return_pct']:>10.2f} {r['win_rate_pct']:>10.2f} {r['num_trades']:>8d} {r['max_drawdown_pct']:>10.2f} {r['sharpe_ratio']:>8.2f}")
+    typer.echo(sep)
+
+    valid = [r for r in results if "error" not in r and r["num_trades"] > 0]
+    if valid:
+        best = max(valid, key=lambda r: r["sharpe_ratio"])
+        typer.echo(f"\n🏆 Best Sharpe: {best['symbol']} ({best['sharpe_ratio']:.2f})")
+
+
+@app.command()
+def optimize(
+    strategy_name: str = typer.Argument(..., help="Strategy name"),
+    symbol: str = typer.Option("BTC-USD", help="Asset symbol"),
+    start: str = typer.Option("2018-01-01", help="Start date"),
+    top: int = typer.Option(10, help="Show top N results"),
+    cash: float = typer.Option(100_000.0, help="Initial capital"),
+) -> None:
+    """Grid search parameter optimization."""
+    from .backtest import optimize_strategy, PARAM_GRIDS
+
+    grid = PARAM_GRIDS.get(strategy_name, {})
+    import itertools
+    n_combos = 1
+    for v in grid.values():
+        n_combos *= len(v)
+    typer.echo(f"🔍 Optimizing {strategy_name} on {symbol} ({n_combos} combinations)...\n")
+
+    results = optimize_strategy(strategy_name, symbol=symbol, start=start, cash=cash)
+
+    typer.echo(f"{'Rank':<6} {'Params':<40} {'Return%':>10} {'Sharpe':>8} {'Trades':>8} {'MaxDD%':>10} {'WinRate%':>10}")
+    sep = "-" * 92
+    typer.echo(sep)
+    for i, r in enumerate(results[:top], 1):
+        params_str = ", ".join(f"{k}={v}" for k, v in r["params"].items())
+        typer.echo(f"{i:<6} {params_str:<40} {r['return_pct']:>10.2f} {r['sharpe_ratio']:>8.2f} {r['num_trades']:>8d} {r['max_drawdown_pct']:>10.2f} {r['win_rate_pct']:>10.2f}")
+    typer.echo(sep)
+
+    if results:
+        best = results[0]
+        typer.echo(f"\n🏆 Best params: {best['params']} (Sharpe: {best['sharpe_ratio']:.2f}, Return: {best['return_pct']:.2f}%)")
+
+
+@app.command(name="walk-forward")
+def walk_forward_cmd(
+    strategy_name: str = typer.Argument(..., help="Strategy name"),
+    symbol: str = typer.Option("BTC-USD", help="Asset symbol"),
+    start: str = typer.Option("2018-01-01", help="Start date"),
+    splits: int = typer.Option(5, help="Number of walk-forward splits"),
+    train_pct: float = typer.Option(0.7, help="Training set percentage"),
+    cash: float = typer.Option(100_000.0, help="Initial capital"),
+) -> None:
+    """Walk-forward analysis with out-of-sample validation."""
+    from .backtest import walk_forward
+
+    typer.echo(f"🔄 Walk-forward analysis: {strategy_name} on {symbol} ({splits} folds, {train_pct:.0%} train)...\n")
+
+    result = walk_forward(strategy_name, symbol=symbol, start=start, n_splits=splits, train_pct=train_pct, cash=cash)
+
+    for f in result["folds"]:
+        params_str = ", ".join(f"{k}={v}" for k, v in f["best_params"].items()) if f["best_params"] else "default"
+        typer.echo(f"  Fold {f['fold']}: train {f['train_period']} | test {f['test_period']}")
+        typer.echo(f"          params: {params_str}")
+        typer.echo(f"          train Sharpe: {f['train_sharpe']:.2f} → test Return: {f['test_return_pct']:.2f}%, Sharpe: {f['test_sharpe']:.2f}, Trades: {f['test_trades']}, MaxDD: {f['test_max_dd_pct']:.2f}%")
+        typer.echo("")
+
+    typer.echo(f"📊 Average out-of-sample: Return {result['avg_test_return_pct']:.2f}%, Sharpe {result['avg_test_sharpe']:.2f}")
+
+
 def main() -> None:
     app()
 
