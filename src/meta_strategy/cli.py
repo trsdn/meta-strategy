@@ -324,6 +324,16 @@ def walk_forward_cmd(
 
     typer.echo(f"📊 Average out-of-sample: Return {result['avg_test_return_pct']:.2f}%, Sharpe {result['avg_test_sharpe']:.2f}")
 
+    stability = result.get("param_stability", {})
+    if stability and stability.get("params_per_fold"):
+        typer.echo(f"\n📋 Parameter Stability: {stability['score_pct']:.0f}% stable")
+        if stability["changes"]:
+            typer.echo("   ⚠️  Unstable parameters (>50% change between consecutive folds):")
+            for c in stability["changes"]:
+                typer.echo(f"      {c['param']}: fold {c['fold_from']}→{c['fold_to']}: {c['prev']} → {c['curr']} ({c['pct_change']:.0f}% change)")
+        else:
+            typer.echo("   ✅ All parameters consistent across folds")
+
 
 @app.command()
 def report(

@@ -461,3 +461,57 @@ def test_check_overfitting_warns_on_negative_oos():
     warning = check_overfitting(result)
     assert warning is not None
     assert warning["ratio"] == float("inf")
+
+
+def test_param_stability_report_stable():
+    """param_stability_report returns stable when params are consistent."""
+    from meta_strategy.backtest import param_stability_report
+    folds = [
+        {"best_params": {"length": 20, "mult": 2.0}},
+        {"best_params": {"length": 20, "mult": 2.0}},
+        {"best_params": {"length": 25, "mult": 2.0}},
+    ]
+    report = param_stability_report(folds)
+    assert report["stable"] is True
+    assert report["score_pct"] == 100.0
+    assert len(report["changes"]) == 0
+
+
+def test_param_stability_report_unstable():
+    """param_stability_report flags >50% parameter changes."""
+    from meta_strategy.backtest import param_stability_report
+    folds = [
+        {"best_params": {"length": 10, "mult": 2.0}},
+        {"best_params": {"length": 30, "mult": 2.0}},
+    ]
+    report = param_stability_report(folds)
+    assert report["stable"] is False
+    assert report["score_pct"] < 100.0
+    assert len(report["changes"]) >= 1
+    assert report["changes"][0]["param"] == "length"
+
+
+def test_param_stability_report_single_fold():
+    """param_stability_report returns stable for single fold."""
+    from meta_strategy.backtest import param_stability_report
+    folds = [{"best_params": {"length": 20}}]
+    report = param_stability_report(folds)
+    assert report["stable"] is True
+    assert report["score_pct"] == 100.0
+
+
+def test_walk_forward_includes_param_stability():
+    """walk_forward result includes param_stability key."""
+    data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
+    import meta_strategy.backtest as bt_mod
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        result = bt_mod.walk_forward("bollinger-bands", n_splits=3)
+        assert "param_stability" in result
+        stability = result["param_stability"]
+        assert "stable" in stability
+        assert "score_pct" in stability
+        assert "changes" in stability
+    finally:
+        bt_mod.fetch_data = original

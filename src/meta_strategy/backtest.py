@@ -757,4 +757,57 @@ def walk_forward(
         "folds": folds,
         "avg_test_return_pct": round(float(avg_test_return), 2),
         "avg_test_sharpe": round(float(avg_test_sharpe), 2),
+        "param_stability": param_stability_report(folds),
+    }
+
+
+def param_stability_report(folds: list[dict]) -> dict:
+    """Analyze parameter stability across walk-forward folds.
+
+    Checks consecutive folds for >50% parameter changes. Returns stability
+    score and per-parameter change details.
+    """
+    if len(folds) < 2:
+        return {"stable": True, "score_pct": 100.0, "changes": [], "params_per_fold": []}
+
+    params_per_fold = [f.get("best_params", {}) for f in folds]
+    if not params_per_fold or not params_per_fold[0]:
+        return {"stable": True, "score_pct": 100.0, "changes": [], "params_per_fold": params_per_fold}
+
+    param_names = list(params_per_fold[0].keys())
+    changes = []
+    total_checks = 0
+    stable_checks = 0
+
+    for i in range(1, len(params_per_fold)):
+        prev = params_per_fold[i - 1]
+        curr = params_per_fold[i]
+        for name in param_names:
+            total_checks += 1
+            prev_val = prev.get(name, 0)
+            curr_val = curr.get(name, 0)
+            if prev_val == 0 and curr_val == 0:
+                stable_checks += 1
+                continue
+            ref = max(abs(prev_val), abs(curr_val))
+            pct_change = abs(curr_val - prev_val) / ref * 100 if ref != 0 else 0.0
+            if pct_change > 50:
+                changes.append({
+                    "param": name,
+                    "fold_from": i,
+                    "fold_to": i + 1,
+                    "prev": prev_val,
+                    "curr": curr_val,
+                    "pct_change": round(pct_change, 1),
+                })
+            else:
+                stable_checks += 1
+
+    score_pct = round(stable_checks / total_checks * 100, 1) if total_checks > 0 else 100.0
+
+    return {
+        "stable": len(changes) == 0,
+        "score_pct": score_pct,
+        "changes": changes,
+        "params_per_fold": params_per_fold,
     }
