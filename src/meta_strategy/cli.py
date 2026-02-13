@@ -120,6 +120,7 @@ def backtest(
     end: str | None = typer.Option(None, help="Backtest end date (default: today)"),
     cash: float = typer.Option(100_000.0, help="Initial capital"),
     commission: float = typer.Option(0.001, help="Commission rate (0.001 = 0.1%)"),
+    interval: str = typer.Option("1d", help="Candle interval (1h, 4h, 1d, etc.)"),
 ) -> None:
     """Run a backtest for a single strategy."""
     from .backtest import STRATEGIES, run_backtest
@@ -129,8 +130,10 @@ def backtest(
         typer.echo(f"   Available: {', '.join(STRATEGIES.keys())}", err=True)
         raise typer.Exit(1)
 
-    typer.echo(f"📊 Running {strategy_name} on {symbol} ({start} → {end or 'today'})...")
-    result = run_backtest(strategy_name, symbol=symbol, start=start, end=end, cash=cash, commission=commission)
+    typer.echo(f"📊 Running {strategy_name} on {symbol} ({start} → {end or 'today'}, {interval})...")
+    result = run_backtest(
+        strategy_name, symbol=symbol, start=start, end=end, cash=cash, commission=commission, interval=interval
+    )
 
     typer.echo(f"\n{'=' * 60}")
     typer.echo(f"  Strategy:        {result['strategy']}")
@@ -156,12 +159,15 @@ def backtest_all(
     cash: float = typer.Option(100_000.0, help="Initial capital"),
     commission: float = typer.Option(0.001, help="Commission rate"),
     save: bool = typer.Option(False, help="Save results to strategies/output/backtest-results.md"),
+    interval: str = typer.Option("1d", help="Candle interval (1h, 4h, 1d, etc.)"),
 ) -> None:
     """Run all strategies and show comparison table."""
     from .backtest import run_all_backtests
 
-    typer.echo(f"📊 Running all strategies on {symbol} ({start} → {end or 'today'})...\n")
-    results = run_all_backtests(symbol=symbol, start=start, end=end, cash=cash, commission=commission)
+    typer.echo(f"📊 Running all strategies on {symbol} ({start} → {end or 'today'}, {interval})...\n")
+    results = run_all_backtests(
+        symbol=symbol, start=start, end=end, cash=cash, commission=commission, interval=interval
+    )
 
     if results:
         r0 = results[0]
@@ -268,6 +274,7 @@ def optimize(
     top: int = typer.Option(10, help="Show top N results"),
     cash: float = typer.Option(100_000.0, help="Initial capital"),
     split: float = typer.Option(0.7, help="Train/test split ratio (0.7 = 70%% train). Use 1.0 for no split."),
+    interval: str = typer.Option("1d", help="Candle interval (1h, 4h, 1d, etc.)"),
 ) -> None:
     """Grid search parameter optimization with train/test split."""
     from .backtest import PARAM_GRIDS, optimize_strategy
@@ -279,9 +286,9 @@ def optimize(
 
     has_split = split < 1.0
     split_label = f", {split:.0%} train" if has_split else ""
-    typer.echo(f"🔍 Optimizing {strategy_name} on {symbol} ({n_combos} combinations{split_label})...\n")
+    typer.echo(f"🔍 Optimizing {strategy_name} on {symbol} ({n_combos} combinations{split_label}, {interval})...\n")
 
-    results = optimize_strategy(strategy_name, symbol=symbol, start=start, cash=cash, split=split)
+    results = optimize_strategy(strategy_name, symbol=symbol, start=start, cash=cash, split=split, interval=interval)
 
     if has_split:
         header = (
@@ -353,6 +360,7 @@ def walk_forward_cmd(
     mode: str = typer.Option("sequential", help="Windowing mode: sequential, rolling, or expanding"),
     train_bars: int | None = typer.Option(None, help="Training window size in bars (rolling/expanding)"),
     step: int | None = typer.Option(None, help="Step size in bars (rolling/expanding)"),
+    interval: str = typer.Option("1d", help="Candle interval (1h, 4h, 1d, etc.)"),
 ) -> None:
     """Walk-forward analysis with out-of-sample validation."""
     from .backtest import walk_forward
@@ -363,7 +371,7 @@ def walk_forward_cmd(
         tb = train_bars or 500
         st = step or 100
         label = f"{mode}, {tb} train bars, {st} step"
-    typer.echo(f"🔄 Walk-forward analysis: {strategy_name} on {symbol} ({label})...\n")
+    typer.echo(f"🔄 Walk-forward analysis: {strategy_name} on {symbol} ({label}, {interval})...\n")
 
     result = walk_forward(
         strategy_name,
@@ -375,6 +383,7 @@ def walk_forward_cmd(
         mode=mode,
         train_bars=train_bars,
         step=step,
+        interval=interval,
     )
 
     for f in result["folds"]:

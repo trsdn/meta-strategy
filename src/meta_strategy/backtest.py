@@ -369,12 +369,41 @@ class ConfluenceStrategy(Strategy):
 # === Data fetching ===
 
 
-def fetch_data(symbol: str = "BTC-USD", start: str = "2018-01-01", end: str | None = None) -> pd.DataFrame:
-    """Fetch OHLCV data via yfinance."""
+VALID_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "1h", "4h", "1d", "5d", "1wk", "1mo"}
+SUB_DAILY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "1h", "4h"}
+MAX_SUB_DAILY_DAYS = 730
+
+
+def fetch_data(
+    symbol: str = "BTC-USD",
+    start: str = "2018-01-01",
+    end: str | None = None,
+    interval: str = "1d",
+) -> pd.DataFrame:
+    """Fetch OHLCV data via yfinance.
+
+    For sub-daily intervals, yfinance limits lookback to ~730 days.
+    Start date is auto-clamped if needed.
+    """
     import yfinance as yf
 
+    if interval not in VALID_INTERVALS:
+        raise ValueError(f"Unsupported interval: {interval}. Valid: {sorted(VALID_INTERVALS)}")
+
     ticker = yf.Ticker(symbol)
-    df = ticker.history(start=start, end=end, auto_adjust=True)
+
+    if interval in SUB_DAILY_INTERVALS:
+        from datetime import datetime, timedelta
+
+        max_start = datetime.now() - timedelta(days=MAX_SUB_DAILY_DAYS)
+        requested = datetime.strptime(start, "%Y-%m-%d")
+        if requested < max_start:
+            start = max_start.strftime("%Y-%m-%d")
+
+        df = ticker.history(start=start, end=end, interval=interval, auto_adjust=True)
+    else:
+        df = ticker.history(start=start, end=end, interval=interval, auto_adjust=True)
+
     # backtesting.py expects columns: Open, High, Low, Close, Volume
     df = df[["Open", "High", "Low", "Close", "Volume"]]
     df.index.name = None
@@ -400,12 +429,13 @@ def run_backtest(
     end: str | None = None,
     cash: float = 100_000.0,
     commission: float = 0.001,
+    interval: str = "1d",
 ) -> dict:
     """Run a backtest and return results as a dict."""
     if strategy_name not in STRATEGIES:
         raise ValueError(f"Unknown strategy: {strategy_name}. Available: {list(STRATEGIES.keys())}")
 
-    data = fetch_data(symbol, start, end)
+    data = fetch_data(symbol, start, end, interval=interval)
     strategy_cls = STRATEGIES[strategy_name]
     warmup = detect_warmup(strategy_cls, data)
 
@@ -489,7 +519,7 @@ def run_all_backtests(symbol: str = "BTC-USD", start: str = "2018-01-01", **kwar
     but B&H is recalculated from the max warmup bar across all strategies
     so every strategy shows the same B&H for fair comparison.
     """
-    data = fetch_data(symbol, start, kwargs.get("end"))
+    data = fetch_data(symbol, start, kwargs.get("end"), interval=kwargs.get("interval", "1d"))
 
     # Detect max warmup across all strategies
     max_warmup = 0
@@ -600,6 +630,7 @@ def optimize_strategy(
     commission: float = 0.001,
     param_grid: dict[str, list] | None = None,
     split: float = 0.7,
+    interval: str = "1d",
 ) -> list[dict]:
     """Grid search over parameter combinations with optional train/test split.
 
@@ -616,7 +647,7 @@ def optimize_strategy(
     if not grid:
         raise ValueError(f"No parameter grid defined for {strategy_name}")
 
-    data = fetch_data(symbol, start, end)
+    data = fetch_data(symbol, start, end, interval=interval)
     strategy_cls = STRATEGIES[strategy_name]
 
     has_split = split < 1.0
@@ -801,6 +832,7 @@ def walk_forward(
     mode: str = "sequential",
     train_bars: int | None = None,
     step: int | None = None,
+    interval: str = "1d",
 ) -> dict:
     """Walk-forward analysis with multiple windowing modes.
 
@@ -819,7 +851,7 @@ def walk_forward(
     if mode not in ("sequential", "rolling", "expanding"):
         raise ValueError(f"mode must be 'sequential', 'rolling', or 'expanding', got '{mode}'")
 
-    data = fetch_data(symbol, start, end)
+    data = fetch_data(symbol, start, end, interval=interval)
     strategy_cls = STRATEGIES[strategy_name]
     grid = PARAM_GRIDS.get(strategy_name, {})
 
