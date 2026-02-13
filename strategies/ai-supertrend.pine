@@ -1,0 +1,65 @@
+You are a professional PineScript version=6 developer.
+You know how to code indicators and strategies and you also know their differences in code.
+I need your help to turn a TradingView indicator into a strategy please.
+
+Go Long when the SuperTrend line turns Green (price closes above the SuperTrend line, direction changes to bullish).
+Close Long when the SuperTrend line turns Red (price closes below the SuperTrend line, direction changes to bearish)
+
+Respect these instructions:
+- Convert all Indicator specific code to Strategy specific code. Don't use any code that a TradingView Strategy won't support. Especially timeframes and gaps. Define those in code so they are semantically the same as before.
+
+- Preserve the timeframe logic if there is one. Fill gaps.
+
+- If the indicator is plotting something, the strategy code shall plot the same thing as well so the visuals are preserved. Set plot offsets to 0.
+
+- Don't trigger a short. Simply go Long and Flat.
+
+- Use this strategy code line. It contains all default parameters you need:
+strategy("AI - SuperTrend", overlay=true, calc_on_every_tick=false, initial_capital=1000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.1, slippage=3, pyramiding=1, margin_long=0, margin_short=0, fill_orders_on_standard_ohlc=true)
+
+- strategy.commission.percent and strategy.slippage don't exist in PineScript. Please avoid this mistake. Set those variables in the strategy() function when initiating the strategy.
+
+- Never make line breaks when calling functions, in IFs, Loops or when defining Variables. It would cause syntax errors. Of course you do need to make line breaks when defining new functions. Search the web for the PineScript documentation to be sure how it’s done.
+
+- Leave all other strategy settings to default values (aka. don't set them at all).
+
+- Never use lookahead_on because that’s cheating. 
+
+- Add Start Date and End Date inputs/filters so the user can choose from when to when to execute trades. Start with 1st January 2018 and go to 31st December 2069.
+
+- When setting the title of the strategy, add "AI - " at the start of the name and then continue with the name of the strategy.
+
+This is the code of the Indicator you shall migrate to a TradingView Strategy:
+// Source: TradingView Built-in Indicator (SuperTrend)
+// Attribution: Standard SuperTrend implementation matching TradingView's built-in indicator
+// Used as input for AI-powered strategy conversion
+
+//@version=5
+indicator("SuperTrend", overlay=true)
+
+atrPeriod = input.int(10, "ATR Period")
+factor = input.float(3.0, "Multiplier")
+src = input(hl2, "Source")
+
+atr2 = ta.atr(atrPeriod)
+
+upperBand = src + factor * atr2
+lowerBand = src - factor * atr2
+
+prevUpperBand = nz(upperBand[1], upperBand)
+prevLowerBand = nz(lowerBand[1], lowerBand)
+
+lowerBand := lowerBand > prevLowerBand or close[1] < prevLowerBand ? lowerBand : prevLowerBand
+upperBand := upperBand < prevUpperBand or close[1] > prevUpperBand ? upperBand : prevUpperBand
+
+var int direction = 1
+direction := direction == -1 and close > prevLowerBand ? 1 : direction == 1 and close < prevUpperBand ? -1 : direction
+
+superTrend = direction == 1 ? lowerBand : upperBand
+bodyMiddle = plot((open + close) / 2, display=display.none)
+trend = plot(superTrend, color=direction == 1 ? color.green : color.red, linewidth=2, title="SuperTrend")
+fill(bodyMiddle, trend, color=direction == 1 ? color.new(color.green, 90) : color.new(color.red, 90))
+
+Additional instructions:
+- CRITICAL: The AI will likely INVERT the logic (buying on Red, selling on Green). Verify the trades on the chart. The correct logic is: Buy when Trend is Green (direction == 1), Sell when Trend is Red (direction == -1).
+- Switch the logic if inverted: Buy when Trend is Green, Sell when Trend is Red.

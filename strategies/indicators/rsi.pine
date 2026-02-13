@@ -1,0 +1,18 @@
+// Source: TradingView Built-in Indicator (RSI)
+// Attribution: Standard RSI implementation matching TradingView's built-in indicator
+// Used as input for AI-powered strategy conversion
+
+//@version=5
+indicator("RSI", overlay=false)
+
+rsiLength = input.int(14, "RSI Length", minval=1)
+smaLength = input.int(200, "SMA Length", minval=1)
+overbought = input.int(70, "Overbought Level")
+oversold = input.int(30, "Oversold Level")
+
+rsiValue = ta.rsi(close, rsiLength)
+smaValue = ta.sma(close, smaLength)
+
+plot(rsiValue, color=color.purple, title="RSI")
+hline(overbought, "Overbought", color=color.red, linestyle=hline.style_dotted)
+hline(oversold, "Oversold", color=color.green, linestyle=hline.style_dotted)

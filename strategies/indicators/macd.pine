@@ -1,0 +1,20 @@
+// Source: TradingView Built-in Indicator (MACD)
+// Attribution: Standard MACD implementation matching TradingView's built-in indicator
+// Used as input for AI-powered strategy conversion
+
+//@version=5
+indicator("MACD", overlay=false)
+
+fastLength = input.int(12, "Fast Length", minval=1)
+slowLength = input.int(26, "Slow Length", minval=1)
+signalLength = input.int(9, "Signal Smoothing", minval=1)
+
+fastMA = ta.ema(close, fastLength)
+slowMA = ta.ema(close, slowLength)
+macdLine = fastMA - slowMA
+signalLine = ta.ema(macdLine, signalLength)
+histogram = macdLine - signalLine
+
+plot(macdLine, color=color.blue, title="MACD")
+plot(signalLine, color=color.orange, title="Signal")
+plot(histogram, color=histogram >= 0 ? color.green : color.red, style=plot.style_histogram, title="Histogram")

@@ -1,0 +1,29 @@
+// Multi-indicator confluence: Bollinger Bands + RSI + MACD
+// Attribution: Combines standard TradingView built-in indicators
+// Used as input for AI-powered strategy conversion
+
+//@version=5
+indicator("Confluence", overlay=true)
+
+// Bollinger Bands
+bbLength = input.int(20, "BB Length", minval=1)
+bbMult = input.float(2.0, "BB Multiplier")
+basis = ta.sma(close, bbLength)
+dev = bbMult * ta.stdev(close, bbLength)
+bbUpper = basis + dev
+bbLower = basis - dev
+
+// RSI
+rsiLength = input.int(14, "RSI Length", minval=1)
+rsiValue = ta.rsi(close, rsiLength)
+
+// MACD
+macdFast = input.int(12, "MACD Fast", minval=1)
+macdSlow = input.int(26, "MACD Slow", minval=1)
+macdSignalLen = input.int(9, "MACD Signal", minval=1)
+macdLine = ta.ema(close, macdFast) - ta.ema(close, macdSlow)
+macdSignal = ta.ema(macdLine, macdSignalLen)
+
+plot(bbUpper, color=color.green, title="BB Upper")
+plot(bbLower, color=color.red, title="BB Lower")
+plot(basis, color=color.blue, title="BB Basis")
