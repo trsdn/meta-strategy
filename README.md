@@ -121,6 +121,14 @@ uv run mypy src/                # Type check
     └── architecture/     # ADRs
 ```
 
+## Limitations
+
+- **Not a substitute for TradingView backtesting.** Local backtests use `backtesting.py` with yfinance data. Fill logic, slippage, and commission handling differ from TradingView's engine. Results are directionally useful but not identical.
+- **No slippage modeling.** All trades fill at the next bar's open price. Real-world slippage on volatile assets (especially crypto) can significantly reduce returns.
+- **Commission approximation.** Default 0.1% per trade. Actual exchange fees vary by platform and volume tier.
+- **Sub-daily data limited to ~730 days** (yfinance constraint). Daily candles have no lookback limit.
+- **BMSB on sub-daily timeframes** uses simulated weekly moving averages from daily-equivalent rolling windows, which may not match TradingView's `request.security()` behavior.
+
 ## License
 
 MIT
