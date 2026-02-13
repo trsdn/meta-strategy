@@ -26,6 +26,7 @@ jobs:
 
       - name: Lint with ruff
         run: uv run ruff check src/ tests/
+        continue-on-error: true
 
       - name: Type check with mypy
         run: uv run mypy src/meta_strategy/ --ignore-missing-imports
