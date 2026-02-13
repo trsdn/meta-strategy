@@ -25,17 +25,17 @@ jobs:
         run: uv sync --dev
 
       - name: Lint with ruff
-        run: uv run ruff check src/ tests/
+        run: uv run --project . ruff check src/ tests/
 
       - name: Type check with mypy
-        run: uv run mypy src/meta_strategy/ --ignore-missing-imports
+        run: uv run --project . mypy src/meta_strategy/ --ignore-missing-imports
         continue-on-error: true
 
       - name: Run tests
-        run: uv run python -m pytest tests/ -v --tb=short
+        run: uv run --project . python -m pytest tests/ -v --tb=short
 
       - name: Security scan with bandit
-        run: uv run bandit -r src/ -q
+        run: uv run --project . bandit -r src/ -q
         continue-on-error: true
 
   validate:
@@ -43,6 +43,12 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: command -v uv || curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: uv sync --dev
 
       - name: Check required files exist
         run: |
@@ -64,8 +70,7 @@ jobs:
 
       - name: Validate YAML strategy definitions
         run: |
-          pip install pyyaml --quiet
-          python -c "
+          uv run --project . python -c "
           import yaml, glob, sys
           errors = 0
           for f in glob.glob('strategies/definitions/*.yml'):
