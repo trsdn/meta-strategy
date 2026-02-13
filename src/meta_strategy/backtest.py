@@ -6,6 +6,8 @@ but runs locally with real market data via yfinance + backtesting.py.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
 import pandas as pd
 from backtesting import Strategy
@@ -16,11 +18,14 @@ from backtesting.lib import (
     crossover,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
 
 class Backtest(_FractionalBacktest):
     """FractionalBacktest with numpy read-only array workaround."""
 
-    def run(self, **kwargs) -> pd.Series:
+    def run(self, **kwargs: Any) -> pd.Series:  # type: ignore[override]
         # Workaround: FractionalBacktest.run() does `indicator /= unit` which
         # fails on read-only numpy arrays. We make them writable first.
         from contextlib import contextmanager
@@ -28,7 +33,7 @@ class Backtest(_FractionalBacktest):
         original_run = _FractionalBacktest.__bases__[0].run  # Backtest.run
 
         @contextmanager
-        def _patch(obj, attr, val):
+        def _patch(obj: Any, attr: str, val: Any) -> Generator[None, None, None]:
             orig = getattr(obj, attr)
             setattr(obj, attr, val)
             try:
@@ -49,7 +54,7 @@ class Backtest(_FractionalBacktest):
                 indicator.setflags(write=True)
                 indicator /= self._fractional_unit
 
-        return result
+        return result  # type: ignore[return-value, no-any-return]
 
 
 # === Indicator functions (used by backtesting.py's self.I()) ===
@@ -227,11 +232,11 @@ class BollingerBandsStrategy(Strategy):
     length = 20
     mult = 2.0
 
-    def init(self):
+    def init(self) -> None:
         self.upper = self.I(bollinger_upper, self.data.Close, self.length, self.mult)
         self.lower = self.I(bollinger_lower, self.data.Close, self.length, self.mult)
 
-    def next(self):
+    def next(self) -> None:
         if not self.position:
             if self.data.Close[-1] > self.upper[-1]:
                 self.buy()
@@ -249,12 +254,12 @@ class SuperTrendStrategy(Strategy):
     period = 10
     factor = 3.0
 
-    def init(self):
+    def init(self) -> None:
         self.direction = self.I(
             supertrend_direction, self.data.High, self.data.Low, self.data.Close, self.period, self.factor
         )
 
-    def next(self):
+    def next(self) -> None:
         if not self.position:
             if self.direction[-1] == 1 and self.direction[-2] == -1:
                 self.buy()
@@ -273,11 +278,11 @@ class BullMarketSupportBandStrategy(Strategy):
     sma_length = 20
     ema_length = 21
 
-    def init(self):
+    def init(self) -> None:
         self.sma = self.I(weekly_sma, self.data.Close, self.sma_length)
         self.ema = self.I(weekly_ema, self.data.Close, self.ema_length)
 
-    def next(self):
+    def next(self) -> None:
         if not self.position:
             if crossover(self.ema, self.sma):
                 self.buy()
@@ -297,11 +302,11 @@ class RSIStrategy(Strategy):
     oversold = 30
     sma_length = 200
 
-    def init(self):
+    def init(self) -> None:
         self.rsi_val = self.I(rsi, self.data.Close, self.rsi_length)
         self.sma_val = self.I(sma, self.data.Close, self.sma_length)
 
-    def next(self):
+    def next(self) -> None:
         if not self.position:
             if self.rsi_val[-1] < self.oversold and self.data.Close[-1] > self.sma_val[-1]:
                 self.buy()
@@ -320,11 +325,11 @@ class MACDStrategy(Strategy):
     slow = 26
     signal_length = 9
 
-    def init(self):
+    def init(self) -> None:
         self.macd = self.I(macd_line, self.data.Close, self.fast, self.slow)
         self.signal = self.I(macd_signal, self.data.Close, self.fast, self.slow, self.signal_length)
 
-    def next(self):
+    def next(self) -> None:
         if not self.position:
             if crossover(self.macd, self.signal):
                 self.buy()
@@ -347,14 +352,14 @@ class ConfluenceStrategy(Strategy):
     macd_slow = 26
     macd_signal_len = 9
 
-    def init(self):
+    def init(self) -> None:
         self.bb_upper = self.I(bollinger_upper, self.data.Close, self.bb_length, self.bb_mult)
         self.bb_lower = self.I(bollinger_lower, self.data.Close, self.bb_length, self.bb_mult)
         self.rsi_val = self.I(rsi, self.data.Close, self.rsi_length)
         self.macd_val = self.I(macd_line, self.data.Close, self.macd_fast, self.macd_slow)
         self.macd_sig = self.I(macd_signal, self.data.Close, self.macd_fast, self.macd_slow, self.macd_signal_len)
 
-    def next(self):
+    def next(self) -> None:
         if not self.position:
             if (
                 self.data.Close[-1] > self.bb_upper[-1]
@@ -407,7 +412,7 @@ def fetch_data(
     # backtesting.py expects columns: Open, High, Low, Close, Volume
     df = df[["Open", "High", "Low", "Close", "Volume"]]
     df.index.name = None
-    return df
+    return df  # type: ignore[return-value, no-any-return]
 
 
 # === Run backtest ===
@@ -512,7 +517,7 @@ def detect_warmup(strategy_cls: type[Strategy], data: pd.DataFrame) -> int:
     return first_valid
 
 
-def run_all_backtests(symbol: str = "BTC-USD", start: str = "2018-01-01", **kwargs) -> list[dict]:
+def run_all_backtests(symbol: str = "BTC-USD", start: str = "2018-01-01", **kwargs: Any) -> list[dict[str, Any]]:
     """Run all strategies with normalized B&H baseline.
 
     Each strategy runs on full data (so strategy returns are unaffected),
@@ -565,8 +570,8 @@ def run_multi_asset(
     strategy_name: str,
     symbols: list[str] | None = None,
     start: str = "2018-01-01",
-    **kwargs,
-) -> list[dict]:
+    **kwargs: Any,
+) -> list[dict[str, Any]]:
     """Run a strategy across multiple assets."""
     symbols = symbols or DEFAULT_ASSETS
     results = []
@@ -623,7 +628,7 @@ PARAM_GRIDS: dict[str, dict[str, list]] = {
 }
 
 
-def _extract_metrics(stats) -> dict:
+def _extract_metrics(stats: Any) -> dict[str, Any]:
     """Extract standard metrics from backtesting.py stats Series."""
     return {
         "return_pct": round(float(stats["Return [%]"]), 2),
@@ -644,7 +649,7 @@ def optimize_strategy(
     param_grid: dict[str, list] | None = None,
     split: float = 0.7,
     interval: str = "1d",
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Grid search over parameter combinations with optional train/test split.
 
     Args:
@@ -678,7 +683,7 @@ def optimize_strategy(
     param_values = list(grid.values())
     combinations = list(itertools.product(*param_values))
 
-    results = []
+    results: list[dict[str, Any]] = []
     for combo in combinations:
         params = dict(zip(param_names, combo, strict=True))
         try:
@@ -710,7 +715,7 @@ def optimize_strategy(
             pass
 
     sort_key = "sharpe_ratio"
-    results.sort(key=lambda r: r[sort_key], reverse=True)
+    results.sort(key=lambda r: float(r[sort_key]), reverse=True)
     return results
 
 
@@ -737,7 +742,9 @@ def check_overfitting(result: dict, threshold: float = 2.0) -> dict | None:
 # === Walk-forward analysis (#15) ===
 
 
-def _optimize_on_data(train_data, strategy_cls, grid, cash, commission):
+def _optimize_on_data(
+    train_data: pd.DataFrame, strategy_cls: type[Strategy], grid: dict[str, list[Any]], cash: float, commission: float
+) -> tuple[dict[str, Any], float]:
     """Find best params by grid search on training data. Returns (best_params, best_sharpe)."""
     best_params = {}
     best_sharpe = -999.0
@@ -759,7 +766,15 @@ def _optimize_on_data(train_data, strategy_cls, grid, cash, commission):
     return best_params, best_sharpe
 
 
-def _evaluate_fold(train_data, test_data, strategy_cls, grid, cash, commission, fold_num):
+def _evaluate_fold(
+    train_data: pd.DataFrame,
+    test_data: pd.DataFrame,
+    strategy_cls: type[Strategy],
+    grid: dict[str, list[Any]],
+    cash: float,
+    commission: float,
+    fold_num: int,
+) -> dict[str, Any] | None:
     """Optimize on train, evaluate on test. Returns fold dict or None."""
     best_params, best_sharpe = _optimize_on_data(train_data, strategy_cls, grid, cash, commission)
     try:
@@ -783,7 +798,9 @@ def _evaluate_fold(train_data, test_data, strategy_cls, grid, cash, commission, 
         return None
 
 
-def _sequential_folds(data, n_splits, train_pct):
+def _sequential_folds(
+    data: pd.DataFrame, n_splits: int, train_pct: float
+) -> Generator[tuple[pd.DataFrame, pd.DataFrame, int], None, None]:
     """Generate (train_data, test_data, fold_num) for sequential non-overlapping windows."""
     n = len(data)
     window_size = n // n_splits
@@ -801,7 +818,9 @@ def _sequential_folds(data, n_splits, train_pct):
         yield train_data, test_data, i + 1
 
 
-def _rolling_folds(data, train_bars, step):
+def _rolling_folds(
+    data: pd.DataFrame, train_bars: int, step: int
+) -> Generator[tuple[pd.DataFrame, pd.DataFrame, int], None, None]:
     """Generate (train_data, test_data, fold_num) for rolling fixed-size window."""
     n = len(data)
     fold_num = 0
@@ -817,7 +836,9 @@ def _rolling_folds(data, train_bars, step):
         i += step
 
 
-def _expanding_folds(data, train_bars, step):
+def _expanding_folds(
+    data: pd.DataFrame, train_bars: int, step: int
+) -> Generator[tuple[pd.DataFrame, pd.DataFrame, int], None, None]:
     """Generate (train_data, test_data, fold_num) for expanding window (train grows from start)."""
     n = len(data)
     fold_num = 0

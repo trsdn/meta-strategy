@@ -146,16 +146,16 @@ def monte_carlo(
     n_trades = len(trade_returns)
 
     rng = np.random.default_rng(seed)
-    sim_returns = []
+    sim_list: list[float] = []
 
     for _ in range(n_simulations):
         # Resample trades with replacement
         sampled = rng.choice(trade_returns, size=n_trades, replace=True)
         # Compound returns
         total = np.prod(1 + sampled) - 1
-        sim_returns.append(total * 100)  # Back to percentage
+        sim_list.append(total * 100)  # Back to percentage
 
-    sim_returns = np.array(sim_returns)
+    sim_returns = np.array(sim_list)
     percentiles = {
         "p5": round(float(np.percentile(sim_returns, 5)), 2),
         "p25": round(float(np.percentile(sim_returns, 25)), 2),
