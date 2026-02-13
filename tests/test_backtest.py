@@ -659,3 +659,40 @@ def test_optimize_passes_interval():
         assert captured.get("interval") == "4h"
     finally:
         bt_mod.fetch_data = original
+
+
+# === BMSB sub-daily skip tests ===
+
+
+def test_run_all_backtests_skips_bmsb_on_subdaily():
+    """run_all_backtests skips BMSB on sub-daily intervals."""
+    import meta_strategy.backtest as bt_mod
+
+    data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        results = bt_mod.run_all_backtests(interval="1h")
+        strategies = [r["strategy"] for r in results]
+        assert "bull-market-support-band" in strategies
+        bmsb = next(r for r in results if r["strategy"] == "bull-market-support-band")
+        assert bmsb.get("skipped") is True
+        assert "1h" in bmsb["reason"]
+    finally:
+        bt_mod.fetch_data = original
+
+
+def test_run_all_backtests_includes_bmsb_on_daily():
+    """run_all_backtests includes BMSB on daily interval."""
+    import meta_strategy.backtest as bt_mod
+
+    data = _make_ohlcv([100 + i * 0.3 for i in range(500)])
+    original = bt_mod.fetch_data
+    bt_mod.fetch_data = lambda *a, **kw: data
+    try:
+        results = bt_mod.run_all_backtests(interval="1d")
+        bmsb = next(r for r in results if r["strategy"] == "bull-market-support-band")
+        assert bmsb.get("skipped") is not True
+        assert "return_pct" in bmsb
+    finally:
+        bt_mod.fetch_data = original
