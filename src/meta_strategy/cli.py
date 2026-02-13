@@ -132,7 +132,7 @@ def backtest(
     typer.echo(f"📊 Running {strategy_name} on {symbol} ({start} → {end or 'today'})...")
     result = run_backtest(strategy_name, symbol=symbol, start=start, end=end, cash=cash, commission=commission)
 
-    typer.echo(f"\n{'='*60}")
+    typer.echo(f"\n{'=' * 60}")
     typer.echo(f"  Strategy:        {result['strategy']}")
     typer.echo(f"  Symbol:          {result['symbol']}")
     typer.echo(f"  Period:          {result['period']}")
@@ -143,7 +143,7 @@ def backtest(
     typer.echo(f"  Max Drawdown:    {result['max_drawdown_pct']:>10.2f}%")
     typer.echo(f"  Sharpe Ratio:    {result['sharpe_ratio']:>10.2f}")
     typer.echo(f"  Final Equity:    ${result['final_equity']:>10.2f}")
-    typer.echo(f"{'='*60}")
+    typer.echo(f"{'=' * 60}")
 
 
 @app.command(name="backtest-all")
@@ -160,6 +160,13 @@ def backtest_all(
 
     typer.echo(f"📊 Running all strategies on {symbol} ({start} → {end or 'today'})...\n")
     results = run_all_backtests(symbol=symbol, start=start, end=end, cash=cash, commission=commission)
+
+    if results:
+        r0 = results[0]
+        typer.echo(
+            f"📐 B&H normalized: {r0['warmup_bars_trimmed']} warmup bars trimmed, "
+            f"effective start: {r0['effective_start']}\n"
+        )
 
     # Print comparison table
     header = (
@@ -292,8 +299,7 @@ def optimize(
             typer.echo(line)
     else:
         header = (
-            f"{'Rank':<6} {'Params':<40} {'Return%':>10} "
-            f"{'Sharpe':>8} {'Trades':>8} {'MaxDD%':>10} {'WinRate%':>10}"
+            f"{'Rank':<6} {'Params':<40} {'Return%':>10} {'Sharpe':>8} {'Trades':>8} {'MaxDD%':>10} {'WinRate%':>10}"
         )
         sep = "-" * 92
         typer.echo(header)
@@ -316,6 +322,7 @@ def optimize(
             )
             typer.echo(best_line)
             from .backtest import check_overfitting
+
             warning = check_overfitting(best)
             if warning:
                 ratio_str = f"{warning['ratio']:.1f}×" if warning["ratio"] != float("inf") else "∞×"
@@ -357,8 +364,15 @@ def walk_forward_cmd(
     typer.echo(f"🔄 Walk-forward analysis: {strategy_name} on {symbol} ({label})...\n")
 
     result = walk_forward(
-        strategy_name, symbol=symbol, start=start, n_splits=splits,
-        train_pct=train_pct, cash=cash, mode=mode, train_bars=train_bars, step=step,
+        strategy_name,
+        symbol=symbol,
+        start=start,
+        n_splits=splits,
+        train_pct=train_pct,
+        cash=cash,
+        mode=mode,
+        train_bars=train_bars,
+        step=step,
     )
 
     for f in result["folds"]:
@@ -372,8 +386,10 @@ def walk_forward_cmd(
         typer.echo(fold_line)
         typer.echo("")
 
-    typer.echo(f"\n📊 Average out-of-sample: Return {result['avg_test_return_pct']:.2f}%, "
-               f"Sharpe {result['avg_test_sharpe']:.2f}")
+    typer.echo(
+        f"\n📊 Average out-of-sample: Return {result['avg_test_return_pct']:.2f}%, "
+        f"Sharpe {result['avg_test_sharpe']:.2f}"
+    )
 
     stability = result.get("param_stability", {})
     if stability and stability.get("params_per_fold"):

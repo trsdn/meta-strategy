@@ -128,12 +128,10 @@ def _svg_equity_chart(equity_curves: dict[str, pd.Series], width: int = 800, hei
             points.append(f"{x:.1f},{y:.1f}")
 
         lines.append(
-            f'<polyline points="{" ".join(points)}" fill="none" stroke="{color}" '
-            f'stroke-width="1.5" opacity="0.9"/>'
+            f'<polyline points="{" ".join(points)}" fill="none" stroke="{color}" stroke-width="1.5" opacity="0.9"/>'
         )
         legend_items.append(
-            f'<span class="legend-item"><span class="legend-dot" '
-            f'style="background:{color}"></span>{name}</span>'
+            f'<span class="legend-item"><span class="legend-dot" style="background:{color}"></span>{name}</span>'
         )
 
     # Y-axis labels
@@ -148,7 +146,7 @@ def _svg_equity_chart(equity_curves: dict[str, pd.Series], width: int = 800, hei
 
     svg = f"""<div class="chart">
 <svg viewBox="0 0 {width} {height}">
-  <rect x="{margin['left']}" y="{margin['top']}" width="{plot_w}" height="{plot_h}" fill="none" stroke="#30363d"/>
+  <rect x="{margin["left"]}" y="{margin["top"]}" width="{plot_w}" height="{plot_h}" fill="none" stroke="#30363d"/>
   {y_labels}
   {"".join(lines)}
 </svg>
@@ -171,17 +169,17 @@ def generate_html_report(
     # Build content
     ret_class = "positive" if result["return_pct"] > 0 else "negative"
     content = f"""
-<h2>{result['strategy']} on {result['symbol']}</h2>
+<h2>{result["strategy"]} on {result["symbol"]}</h2>
 <table>
   <tr><th>Metric</th><th>Value</th></tr>
-  <tr><td>Period</td><td>{result['period']}</td></tr>
-  <tr><td>Return</td><td class="{ret_class}">{result['return_pct']:.2f}%</td></tr>
-  <tr><td>Buy &amp; Hold</td><td>{result['buy_hold_return_pct']:.2f}%</td></tr>
-  <tr><td>Win Rate</td><td>{result['win_rate_pct']:.2f}%</td></tr>
-  <tr><td># Trades</td><td>{result['num_trades']}</td></tr>
-  <tr><td>Max Drawdown</td><td class="negative">{result['max_drawdown_pct']:.2f}%</td></tr>
-  <tr><td>Sharpe Ratio</td><td>{result['sharpe_ratio']:.2f}</td></tr>
-  <tr><td>Final Equity</td><td>${result['final_equity']:,.2f}</td></tr>
+  <tr><td>Period</td><td>{result["period"]}</td></tr>
+  <tr><td>Return</td><td class="{ret_class}">{result["return_pct"]:.2f}%</td></tr>
+  <tr><td>Buy &amp; Hold</td><td>{result["buy_hold_return_pct"]:.2f}%</td></tr>
+  <tr><td>Win Rate</td><td>{result["win_rate_pct"]:.2f}%</td></tr>
+  <tr><td># Trades</td><td>{result["num_trades"]}</td></tr>
+  <tr><td>Max Drawdown</td><td class="negative">{result["max_drawdown_pct"]:.2f}%</td></tr>
+  <tr><td>Sharpe Ratio</td><td>{result["sharpe_ratio"]:.2f}</td></tr>
+  <tr><td>Final Equity</td><td>${result["final_equity"]:,.2f}</td></tr>
 </table>
 
 <h2>Equity Curve</h2>
@@ -202,6 +200,7 @@ def generate_html_report(
 
 
 # === Comparison Dashboard (#17) ===
+
 
 def generate_dashboard(
     symbol: str = "BTC-USD",
@@ -224,14 +223,14 @@ def generate_dashboard(
     for _name, (r, _) in results_and_equity.items():
         ret_class = "positive" if r["return_pct"] > 0 else "negative"
         rows += f"""<tr>
-  <td>{r['strategy']}</td>
-  <td class="{ret_class}">{r['return_pct']:.2f}%</td>
-  <td>{r['buy_hold_return_pct']:.2f}%</td>
-  <td>{r['win_rate_pct']:.2f}%</td>
-  <td>{r['num_trades']}</td>
-  <td class="negative">{r['max_drawdown_pct']:.2f}%</td>
-  <td>{r['sharpe_ratio']:.2f}</td>
-  <td>${r['final_equity']:,.2f}</td>
+  <td>{r["strategy"]}</td>
+  <td class="{ret_class}">{r["return_pct"]:.2f}%</td>
+  <td>{r["buy_hold_return_pct"]:.2f}%</td>
+  <td>{r["win_rate_pct"]:.2f}%</td>
+  <td>{r["num_trades"]}</td>
+  <td class="negative">{r["max_drawdown_pct"]:.2f}%</td>
+  <td>{r["sharpe_ratio"]:.2f}</td>
+  <td>${r["final_equity"]:,.2f}</td>
 </tr>"""
 
     # Equity curves
@@ -240,7 +239,7 @@ def generate_dashboard(
     if results_and_equity:
         valid = [(n, r) for n, (r, _) in results_and_equity.items() if r["num_trades"] > 0]
         best = max(valid, key=lambda x: x[1]["sharpe_ratio"]) if valid else None
-        best_line = f'<p>🏆 <strong>Best Sharpe:</strong> {best[0]} ({best[1]["sharpe_ratio"]:.2f})</p>' if best else ""
+        best_line = f"<p>🏆 <strong>Best Sharpe:</strong> {best[0]} ({best[1]['sharpe_ratio']:.2f})</p>" if best else ""
     else:
         best_line = ""
 
@@ -271,6 +270,7 @@ def generate_dashboard(
 
 
 # === Export (#18) ===
+
 
 def export_results_json(results: list[dict], output_path: str) -> None:
     """Export backtest results to JSON."""
