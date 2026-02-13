@@ -1,0 +1,13 @@
+# MACD — Crossover Strategy
+# Entry on bullish crossover (MACD > Signal), exit on bearish crossover (Signal > MACD)
+
+name: "MACD"
+indicator_source: "strategies/indicators/macd.pine"
+
+entry_condition: "the MACD line crosses ABOVE the Signal line (bullish crossover)"
+exit_condition: "the MACD line crosses BELOW the Signal line (bearish crossover)"
+
+special_instructions:
+  - "This is a standard MACD crossover strategy. Enter when MACD crosses above signal, exit when it crosses below."
+  - "Use ta.crossover() and ta.crossunder() for clean signal detection."
+  - "The strategy enters/exits on the next candle open after the condition is met."

@@ -1,0 +1,14 @@
+# Confluence — Multi-Indicator Confirmation Strategy
+# Combines Bollinger Bands breakout + RSI filter + MACD momentum for high-confidence entries
+
+name: "Confluence"
+indicator_source: "strategies/indicators/confluence.pine"
+
+entry_condition: "Close is ABOVE the Upper Bollinger Band AND RSI is below 70 (not overbought) AND MACD line is above Signal line (momentum confirms)"
+exit_condition: "Close is BELOW the Lower Bollinger Band OR RSI is above 80 (extremely overbought)"
+
+special_instructions:
+  - "This is a CONFLUENCE strategy requiring ALL three conditions for entry. Do not enter on just one signal."
+  - "IMPORTANT: Buy when close is above upper BB (breakout, not mean reversion). This is trend-following."
+  - "Exit is an OR condition — either close below lower BB or RSI > 80 triggers exit."
+  - "The strategy enters/exits on the next candle open after the condition is met."

@@ -1,0 +1,13 @@
+# RSI — Oversold/Overbought with Trend Filter Strategy
+# Entry on oversold (RSI < 30) in uptrend (close > 200 SMA), exit on overbought (RSI > 70)
+
+name: "RSI"
+indicator_source: "strategies/indicators/rsi.pine"
+
+entry_condition: "RSI is below 30 (oversold) AND the Close Price is ABOVE the 200-period SMA (confirming uptrend)"
+exit_condition: "RSI is above 70 (overbought)"
+
+special_instructions:
+  - "This strategy uses RSI as a mean-reversion signal FILTERED by trend direction. Only buy oversold dips in an uptrend."
+  - "The 200-period SMA acts as a trend filter — no entries when price is below it."
+  - "The strategy enters/exits on the next candle open after the condition is met."
