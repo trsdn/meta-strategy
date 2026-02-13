@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          files=(
+            ".github/copilot-instructions.md"
+            "docs/constitution/PROCESS.md"
+            "AGENTS.md"
+            "README.md"
+          )
+          for f in "${files[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "❌ Missing: $f"
+              exit 1
+            fi
+            echo "✅ Found: $f"
+          done
+
+      - name: Validate YAML files
+        run: |
+          pip install yamllint --quiet
+          find . -name "*.yml" -o -name "*.yaml" | head -20 | while read f; do
+            yamllint -d "{extends: relaxed, rules: {line-length: disable}}" "$f" && echo "✅ $f" || echo "⚠️ $f has warnings"
+          done
+
+      - name: Check for unresolved placeholders
+        run: |
+          # Only warn — placeholders are expected in template repos
+          if grep -r "{{" --include="*.md" --include="*.yml" --include="*.yaml" . | grep -v ".git/" | grep -v "node_modules/"; then
+            echo "ℹ️ Placeholders found (expected for template repos)"
+          fi
