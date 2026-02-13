@@ -97,3 +97,145 @@ def test_no_special_instructions(template_file, definition):
     """No 'Additional instructions' section when list is empty."""
     result = render_prompt(definition, template_file)
     assert "Additional instructions:" not in result
+
+
+def test_strategy_params_field(indicator_file):
+    """strategy_params field stores override parameters."""
+    defn = StrategyDefinition(
+        name="Params Test",
+        indicator_source=str(indicator_file),
+        entry_condition="buy",
+        exit_condition="sell",
+        strategy_params={"length": 30, "mult": 2.5, "use_ema": True},
+    )
+    assert defn.strategy_params["length"] == 30
+    assert defn.strategy_params["mult"] == 2.5
+    assert defn.strategy_params["use_ema"] is True
+
+
+def test_strategy_params_default_empty(definition):
+    """strategy_params defaults to empty dict."""
+    assert definition.strategy_params == {}
+
+
+def test_resolve_indicator_path_absolute(tmp_path):
+    """Absolute indicator path is returned unchanged regardless of base_dir."""
+    abs_path = tmp_path / "indicators" / "test.pine"
+    defn = StrategyDefinition(
+        name="Test",
+        indicator_source=str(abs_path),
+        entry_condition="buy",
+        exit_condition="sell",
+    )
+    resolved = defn.resolve_indicator_path(base_dir=Path("/some/other/dir"))
+    assert resolved == abs_path
+
+
+def test_resolve_indicator_path_with_base_dir(tmp_path):
+    """Relative indicator path is resolved against base_dir."""
+    defn = StrategyDefinition(
+        name="Test",
+        indicator_source="indicators/test.pine",
+        entry_condition="buy",
+        exit_condition="sell",
+    )
+    resolved = defn.resolve_indicator_path(base_dir=tmp_path)
+    assert resolved == tmp_path / "indicators" / "test.pine"
+
+
+def test_resolve_indicator_path_no_base_dir():
+    """Relative path without base_dir stays relative."""
+    defn = StrategyDefinition(
+        name="Test",
+        indicator_source="indicators/test.pine",
+        entry_condition="buy",
+        exit_condition="sell",
+    )
+    resolved = defn.resolve_indicator_path(base_dir=None)
+    assert resolved == Path("indicators/test.pine")
+
+
+def test_render_with_base_dir(tmp_path):
+    """render_prompt resolves indicator path via base_dir."""
+    # Set up indicator at base_dir/indicators/test.pine
+    ind = tmp_path / "indicators" / "test.pine"
+    ind.parent.mkdir(parents=True)
+    ind.write_text('//@version=5\nindicator("Test")\nplot(close)\n')
+
+    # Template in a different directory
+    template = tmp_path / "templates" / "prompt.md"
+    template.parent.mkdir()
+    template.write_text(
+        "You are a professional PineScript version=6 developer.\n"
+        "Go Long when…\nClose Long when…\n"
+        'strategy("NAME", overlay=true)\n[YOUR STRATEGY CODE GOES HERE]\n'
+    )
+
+    defn = StrategyDefinition(
+        name="Base Dir Test",
+        indicator_source="indicators/test.pine",
+        entry_condition="buy",
+        exit_condition="sell",
+    )
+    result = render_prompt(defn, template, base_dir=tmp_path)
+    assert "plot(close)" in result
+    assert 'AI - Base Dir Test' in result
+
+
+def test_empty_indicator_file(tmp_path):
+    """Engine handles empty indicator source file."""
+    ind = tmp_path / "empty.pine"
+    ind.write_text("")
+
+    template = tmp_path / "prompt.md"
+    template.write_text(
+        "Go Long when…\nClose Long when…\n"
+        'strategy("NAME")\n[YOUR STRATEGY CODE GOES HERE]\n'
+    )
+
+    defn = StrategyDefinition(
+        name="Empty",
+        indicator_source=str(ind),
+        entry_condition="buy",
+        exit_condition="sell",
+    )
+    result = render_prompt(defn, template)
+    assert "[YOUR STRATEGY CODE GOES HERE]" not in result
+    assert "Go Long when buy" in result
+
+
+def test_unicode_content(tmp_path):
+    """Engine handles unicode in indicator and definition."""
+    ind = tmp_path / "unicode.pine"
+    ind.write_text('//@version=5\n// Ünïcödé cömmënt ñ\nplot(close)\n')
+
+    template = tmp_path / "prompt.md"
+    template.write_text(
+        "Go Long when…\nClose Long when…\n"
+        'strategy("NAME")\n[YOUR STRATEGY CODE GOES HERE]\n'
+    )
+
+    defn = StrategyDefinition(
+        name="Ünïcödé Strategy",
+        indicator_source=str(ind),
+        entry_condition="Preis über Widerstand",
+        exit_condition="Preis unter Unterstützung",
+    )
+    result = render_prompt(defn, template)
+    assert "Ünïcödé" in result
+    assert "Preis über Widerstand" in result
+
+
+def test_template_without_placeholders(tmp_path, indicator_file):
+    """Template missing expected placeholders returns template mostly unchanged."""
+    template = tmp_path / "plain.md"
+    template.write_text("This template has no standard placeholders.\n")
+
+    defn = StrategyDefinition(
+        name="Test",
+        indicator_source=str(indicator_file),
+        entry_condition="buy",
+        exit_condition="sell",
+    )
+    result = render_prompt(defn, template)
+    assert "This template has no standard placeholders." in result
